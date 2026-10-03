@@ -25,9 +25,9 @@ class Display extends JFrame {
               .getDefaultConfiguration());
 
         setTitle("Das Game");
-        setSize(MagicNumbers.SCREEN_WIDTH,
-                MagicNumbers.SCREEN_HEIGHT);
-        setIconImage(Global.textureManager.UITextures.get(0));
+        setSize(Consts.WINDOW_WIDTH,
+                Consts.WINDOW_HEIGHT);
+        // setIconImage(Global.textureManager.UITextures.get(0));
 
         setLocationRelativeTo(null); // Centers the window
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // todo: change to DO_NOTHING_ON_CLOSE and actually handle the closing.
@@ -46,9 +46,9 @@ class Display extends JFrame {
 
     private class KeyHandler implements KeyListener {
         // This is a surprise tool that will help us later
-        /*
         @Override
         public void keyPressed(KeyEvent e) {
+            /*
             String symbolTyped = KeyEvent.getKeyText(e.getKeyCode());
             if (null != symbolTyped) switch (symbolTyped) {
                 case "W":
