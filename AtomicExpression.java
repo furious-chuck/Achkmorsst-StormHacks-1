@@ -4,7 +4,7 @@ public abstract class AtomicExpression implements Expression {
         return new Expression[] {};
     }
 
-    public class Numbers {
+    public static class Numbers {
         private Numbers() {}
 
 
@@ -34,6 +34,20 @@ public abstract class AtomicExpression implements Expression {
             }
         }
 
+    }
+
+    public static class StringExpression extends AtomicExpression {
+        String stringContents;
+        public StringExpression(String stringContents) {
+            for (int i = 0; i < stringContents.length(); i++) {
+                if (stringContents.charAt(i) == '"') this.stringContents += "\\";
+                this.stringContents += stringContents.charAt(i);
+            }
+        }
+        @Override
+        public String compile() {
+            return "\"" + stringContents + "\"";
+        }
     }
 
 }
