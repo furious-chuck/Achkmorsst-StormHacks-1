@@ -1,4 +1,15 @@
 public class RectVector implements Vector {
+
+
+    public RectVector(double x, double y) {
+        // todo
+    }
+
+    public RectVector() {
+        this(0, 0);
+    }
+
+
     @Override
     public double getX() {
         return 0;

@@ -27,7 +27,11 @@ public abstract class AtomicExpression extends BlockExpression {
 
             @Override
             public void paint(Graphics g) {
-
+                Polygon poly = Util.createPolygon(
+                        new Vector[] {
+                                new RectVector()
+                        }
+                );
             }
         }
 
