@@ -11,7 +11,7 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     public String text;
     public Expression[] childExpressions;
 
-    public double getMaxChildHeight
+    // public double getMaxChildHeight
 
     @Override
     public Expression[] getChildExpressions() {
