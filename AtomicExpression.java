@@ -40,6 +40,7 @@ public abstract class AtomicExpression implements Expression {
         String stringContents;
         public StringExpression(String stringContents) {
             for (int i = 0; i < stringContents.length(); i++) {
+                // ALL OF THIS MAY BE COMPLETELY BROKEN STRINGS SUCK ANYWAY THO SO ITS OKAY
                 if (stringContents.charAt(i) == '"') this.stringContents += "\\";
                 this.stringContents += stringContents.charAt(i);
             }
