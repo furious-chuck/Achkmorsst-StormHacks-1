@@ -58,7 +58,6 @@ public class RectVector implements Vector {
 
     @Override
     public Vector clone() {
-        super.clone();
         return new RectVector(this.x, this.y);
     }
 
