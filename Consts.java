@@ -7,6 +7,6 @@ public class Consts {
     // static final Vector WINDOW_SIZE = ...;
     // once the Vector interface is done
 
-    static final int EXAMPLE_TYPE = 1;
+    static final int EXAMPLE_TYPE = 1; //THIS IS TEMPORARY, when block types are made rename this
 
 }
