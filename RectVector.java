@@ -53,6 +53,7 @@ public class RectVector implements Vector {
 
     @Override
     public double getLength() {
+        System.out.println("h");
         return Math.hypot(x, y);
     }
 
