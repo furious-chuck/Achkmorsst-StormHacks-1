@@ -9,4 +9,6 @@ public class Consts {
 
     static final int EXAMPLE_TYPE = 1; //THIS IS TEMPORARY, when block types are made rename this
 
+    static final int LETTER_WIDTH = 7;
+
 }
