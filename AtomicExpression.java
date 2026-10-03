@@ -10,17 +10,20 @@ public abstract class AtomicExpression extends BlockExpression {
     @Override
     public void paint(Graphics g) {
         g.setColor(mainColor);
-        g.drawPolygon(Util.createPolygon(
-                new Vector[]{
-                        Global.cameraPos.add(new RectVector(0, 0)),
-                        Global.cameraPos.add(new RectVector(getValueWidth() + 20, 0)),
-                        Global.cameraPos.add(new RectVector(getValueWidth() + 20, Consts.LETTER_HEIGHT + 20)),
-                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT + 20)),
-                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 + 5)),
-                        Global.cameraPos.add(new RectVector(-5, Consts.LETTER_HEIGHT / 2.0 + 10)),
-                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 - 5))
+        g.fillPolygon(Util.createPolygon(
+                new Vector[] {
+                        (new RectVector(0, 0)).subtract(Global.cameraPos),
+                        (new RectVector(getValueWidth() + 20, 0)).subtract(Global.cameraPos),
+                        (new RectVector(getValueWidth() + 20, Consts.LETTER_HEIGHT + 20)).subtract(Global.cameraPos),
+                        (new RectVector(0, Consts.LETTER_HEIGHT + 20)).subtract(Global.cameraPos),
+                        (new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 + 5)).subtract(Global.cameraPos),
+                        (new RectVector(-5, Consts.LETTER_HEIGHT / 2.0 + 10)).subtract(Global.cameraPos),
+                        (new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 - 5)).subtract(Global.cameraPos)
                 }
         ));
+        // g.fillRect(100, 100, 100, 100);
+
+        System.out.println("Painting something!");
     }
 
     public static class Numbers {
@@ -32,7 +35,7 @@ public abstract class AtomicExpression extends BlockExpression {
             int value;
             public IntNumber(int value) {
                 this.value = value;
-                mainColor = Color.BLUE;
+                mainColor = new Color(127, 127, 255);
                 outlineColor = Color.BLACK;
                 textColor = Color.BLACK;
             }
@@ -53,7 +56,7 @@ public abstract class AtomicExpression extends BlockExpression {
             double value;
             public DoubleNumber(int value) {
                 this.value = value;
-                mainColor = Color.CYAN;
+                mainColor = new Color(127, 255, 255);
                 outlineColor = Color.BLACK;
                 textColor = Color.BLACK;
             }
@@ -79,7 +82,7 @@ public abstract class AtomicExpression extends BlockExpression {
                 if (stringContents.charAt(i) == '"') this.stringContents += "\\";
                 this.stringContents += stringContents.charAt(i);
             }
-            mainColor = Color.GREEN;
+            mainColor = new Color(127, 255, 127);
             outlineColor = Color.BLACK;
             textColor = Color.BLACK;
         }
