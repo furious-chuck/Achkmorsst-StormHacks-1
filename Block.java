@@ -1,5 +1,3 @@
-static final int EXAMPLE_TYPE = 1;
-
 public class Block { // louie/dingus' thingus thing
     int blockType = 0;
     int[] ints;
@@ -12,11 +10,10 @@ public class Block { // louie/dingus' thingus thing
 
     void Process() {
         switch(blockType) {
-            case EXAMPLE_TYPE:
+            case Consts.EXAMPLE_TYPE:
                 break;
             default:
         }
     }
 
 }
- static void main() {return;}
