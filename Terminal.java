@@ -3,8 +3,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class Terminal {
-        private static final BufferedReader terminalReader = new BufferedReader(new InputStreamReader(System.in));
-    public static void RunTerminalLoop(){
+    private static final BufferedReader terminalReader = new BufferedReader(new InputStreamReader(System.in));
+    public static void runTerminalLoop() {
         String line;
             try {
                 while (true) {
