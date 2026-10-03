@@ -4,6 +4,7 @@ public class Block { // louie/dingus' thingus thing
     //some variables of the block
     int[] ints;
     String[] strings;
+    Block[] children;
 
 
     //block definers
@@ -32,6 +33,21 @@ public class Block { // louie/dingus' thingus thing
             case Consts.EXAMPLE_TYPE:
                 break;
             default:
+        }
+        for (Block child: children) {
+            child.Process();
+        }
+    }
+
+    void Draw() {
+        //draws the block, idk how to do this
+        switch(blockType) {
+            case Consts.EXAMPLE_TYPE:
+                break;
+            default:
+        }
+        for (Block child: children) {
+            child.Draw();
         }
     }
 
