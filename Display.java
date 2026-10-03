@@ -17,14 +17,16 @@ class Display extends JFrame {
     Paintable[] paintQueue = {};
 
 
-    public Display() {
+    public Display(String name) {
 
         super(GraphicsEnvironment
               .getLocalGraphicsEnvironment()
               .getDefaultScreenDevice()
               .getDefaultConfiguration());
 
-        setTitle("Das Game");
+        System.out.println("display created!");
+
+        setTitle(name);
         setSize(Consts.WINDOW_WIDTH,
                 Consts.WINDOW_HEIGHT);
         // setIconImage(Global.textureManager.UITextures.get(0));
