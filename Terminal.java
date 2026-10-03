@@ -28,7 +28,7 @@ public class Terminal {
                     }
 
                     // --- Put your command handling here ---
-                    System.out.println("You typed: " + line);
+                    System.out.println("You have typed: " + line);
                 }
             } catch (IOException e) {
                 System.err.println("Terminal I/O error: " + e.getMessage());
