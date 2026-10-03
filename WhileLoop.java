@@ -18,4 +18,8 @@ public class WhileLoop extends CascadeCompiledStatement implements StatementCont
         return null;
     }
 
+    @Override
+    public Expression[] getChildExpressions() {
+        return new Expression[] { condition };
+    }
 }

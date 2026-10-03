@@ -5,6 +5,23 @@ public abstract class AtomicExpression extends BlockExpression {
     public Expression[] getChildExpressions() {
         return new Expression[] {};
     }
+    public abstract double getValueWidth();
+
+    @Override
+    public void paint(Graphics g) {
+        g.setColor(mainColor);
+        g.drawPolygon(Util.createPolygon(
+                new Vector[]{
+                        Global.cameraPos.add(new RectVector(0, 0)),
+                        Global.cameraPos.add(new RectVector(getValueWidth() + 20, 0)),
+                        Global.cameraPos.add(new RectVector(getValueWidth() + 20, Consts.LETTER_HEIGHT + 20)),
+                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT + 20)),
+                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 + 5)),
+                        Global.cameraPos.add(new RectVector(-5, Consts.LETTER_HEIGHT / 2.0 + 10)),
+                        Global.cameraPos.add(new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 - 5))
+                }
+        ));
+    }
 
     public static class Numbers {
         private Numbers() {}
@@ -26,12 +43,8 @@ public abstract class AtomicExpression extends BlockExpression {
             }
 
             @Override
-            public void paint(Graphics g) {
-                Polygon poly = Util.createPolygon(
-                        new Vector[] {
-                                new RectVector()
-                        }
-                );
+            public double getValueWidth() {
+                return String.valueOf(value).length() * Consts.LETTER_WIDTH;
             }
         }
 
@@ -51,8 +64,8 @@ public abstract class AtomicExpression extends BlockExpression {
             }
 
             @Override
-            public void paint(Graphics g) {
-
+            public double getValueWidth() {
+                return String.valueOf(value).length() * Consts.LETTER_WIDTH;
             }
         }
 
@@ -76,8 +89,8 @@ public abstract class AtomicExpression extends BlockExpression {
         }
 
         @Override
-        public void paint(Graphics g) {
-
+        public double getValueWidth() {
+            return String.valueOf(stringContents).length() * Consts.LETTER_WIDTH;
         }
     }
 

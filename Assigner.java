@@ -34,4 +34,8 @@ public class Assigner extends CascadeCompiledStatement {
         return lValue.compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + rValue;
     }
 
+    @Override
+    public Expression[] getChildExpressions() {
+        return new Expression[] { lValue, rValue };
+    }
 }
