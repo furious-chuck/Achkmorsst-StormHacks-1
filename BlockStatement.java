@@ -169,6 +169,54 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
      */
     @Override
     public Hoverable findHoveredBlock(Vector mousePos) {
+        // children first — but only when the point is actually inside OUR bounds: a
+        // dragged atomic floating over another statement's row must not be treated as
+        // a child of that statement (it isn't packed in it), otherwise the hover/drop
+        // search reports the foreign child instead of the container underneath it.
+        if (containsPoint(mousePos)) {
+            Hoverable found = findHoveredChild(mousePos);
+            if (found != null) {
+                return found;
+            }
+            return this;
+        }
+        // finally, any statement connected below us
+        if (followingStatement instanceof BlockStatement bs) {
+            return bs.findHoveredBlock(mousePos);
+        }
+        return null;
+    }
+
+    /**
+     * Same search as findHoveredBlock(), but WITHOUT walking into the following-statement
+     * chain: only this statement (its child slots and its own shape) is considered.
+     * Dragging uses this so that a root statement's hit area stops at its own bounds —
+     * otherwise every statement in a connected stack would claim the points belonging
+     * to the statements below it, and each duplicate hit would win the "smallest area"
+     * contest against the real target, making lower blocks impossible to drop onto.
+     */
+    public Hoverable findHoveredHere(Vector mousePos) {
+        if (containsPoint(mousePos)) {
+            Hoverable found = findHoveredChild(mousePos);
+            if (found != null) {
+                return found;
+            }
+            return this;
+        }
+        return null;
+    }
+
+    /**
+     * Searches this statement's packed child slots for the deepest block under the
+     * given world-space point. Slot positions are recomputed from this statement's
+     * current position (the same layout convention paint() uses), so children always
+     * report up-to-date hit areas even after the parent has been moved or resized.
+     * A slot whose own box does not contain the point is skipped outright: this is
+     * what keeps a free-floating (detached/dragged) atomic sitting on top of the row
+     * from being mistaken for a genuine child of this container — such a block is not
+     * packed here anymore, so hitting it must never hide the container underneath it.
+     */
+    private Hoverable findHoveredChild(Vector mousePos) {
         if (this instanceof ExpressionPackingStatement eps) {
             double elementOffset = eps.leftSpace;
             for (int i = 0; i < eps.expressions.length; i++) {
@@ -185,7 +233,10 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
                 // child slot computed from the parent's current position, matching paint()
                 Vector previousPosition = expression.position;
                 expression.position = position.add(new RectVector(elementOffset, 10));
-                Hoverable found = expression.findHoveredBlock(mousePos);
+                Hoverable found = null;
+                if (expression.containsPoint(mousePos)) {
+                    found = expression.findHoveredBlock(mousePos);
+                }
                 expression.position = previousPosition;
                 if (found != null) {
                     return found;
@@ -194,21 +245,13 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
             }
         } else {
             for (Expression exp : getChildExpressions()) {
-                if (exp instanceof BlockExpression be) {
+                if (exp instanceof BlockExpression be && be.containsPoint(mousePos)) {
                     Hoverable found = be.findHoveredBlock(mousePos);
                     if (found != null) {
                         return found;
                     }
                 }
             }
-        }
-        // then our own shape
-        if (containsPoint(mousePos)) {
-            return this;
-        }
-        // finally, any statement connected below us
-        if (followingStatement instanceof BlockStatement bs) {
-            return bs.findHoveredBlock(mousePos);
         }
         return null;
     }
