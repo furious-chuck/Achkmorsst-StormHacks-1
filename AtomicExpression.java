@@ -11,12 +11,12 @@ public abstract class AtomicExpression extends BlockExpression {
 
     @Override
     public double getCascadingHeight() {
-        return Consts.LETTER_HEIGHT + 10;
+        return Consts.LETTER_HEIGHT + 20; // must match the height paint() actually draws
     }
 
     @Override
     public double getCascadingWidth() {
-        return getValueWidth() + 10;
+        return getValueWidth() + 20; // must match the width paint() actually draws
     }
 
     //@Override
