@@ -14,7 +14,7 @@ public class Main {
         BlockStatement we = new WhileLoop(new AtomicExpression.Numbers.DoubleNumber(100.0), be, bo);
 
         BlockManager bm = new BlockManager(
-                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { we })),
+                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { be })),
                 new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {}))
         );
 
