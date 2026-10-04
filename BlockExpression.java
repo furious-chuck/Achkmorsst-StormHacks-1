@@ -36,12 +36,24 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         return getClass().getSimpleName();
     }
 
+    /**
+     * The world-space rectangle paint() actually draws this expression in. Atomic
+     * expressions are inset by 5px on the top/left inside their slot bounds (see
+     * AtomicExpression.paint), so hit-testing must use this box instead of the raw
+     * `position` — otherwise a few pixels around the block claim to be hovered while
+     * looking empty, and vice versa.
+     */
+    public Vector getPaintedPosition() {
+        return position;
+    }
+
     @Override
     public boolean containsPoint(Vector p) {
-        return p.getX() >= position.getX() &&
-               p.getX() <= position.getX() + getCascadingWidth() &&
-               p.getY() >= position.getY() &&
-               p.getY() <= position.getY() + getCascadingHeight();
+        Vector painted = getPaintedPosition();
+        return p.getX() >= painted.getX() &&
+               p.getX() <= painted.getX() + getCascadingWidth() &&
+               p.getY() >= painted.getY() &&
+               p.getY() <= painted.getY() + getCascadingHeight();
     }
 
     /**
@@ -118,6 +130,36 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
             oldParent.setChildElement(leftoverIndex, null);
         }
         parentExpression = null;
+
+        // safety net: if none of the paths above actually blanked our slot (e.g. an
+        // exotic parent whose setChildElement doesn't clear the back-link), force the
+        // link off now that we are logically detached. Without this, the old parent
+        // still thinks we live in one of its slots and paints us there *instead of*
+        // walking us as a free root — the block visually vanishes from the canvas the
+        // instant the mouse goes down even though it is being dragged around invisibly.
+        if (wasPackedIn(oldParent)) {
+            oldParent.forceRemoveChildLink(this);
+        }
+    }
+
+    /**
+     * True if this expression is still registered as a direct child of the given
+     * container after a detach attempt (i.e. the container's slot still points at us).
+     */
+    private boolean wasPackedIn(HasChildExpressions maybeParent) {
+        if (maybeParent == null) {
+            return false;
+        }
+        Expression[] kids = maybeParent.getChildExpressions();
+        if (kids == null) {
+            return false;
+        }
+        for (Expression kid : kids) {
+            if (kid == this) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -19,6 +19,18 @@ public abstract class AtomicExpression extends BlockExpression {
         return getValueWidth() + 20; // must match the width paint() actually draws
     }
 
+    /**
+     * Atomic expressions are drawn inset by 5px inside their slot bounds (see
+     * paint()), so hit-testing must use the same offset rectangle. Without this,
+     * grabbing an atomic near its edges misses it and grabs the enclosing statement
+     * instead — which drags the whole parent away and leaves the atomic behind,
+     * making it look like the block "disappeared" the instant the mouse went down.
+     */
+    @Override
+    public Vector getPaintedPosition() {
+        return position.add(new RectVector(5, 5));
+    }
+
     //@Override
     public void setChildExpression(int childID, Expression newExpression) {
         Util.unableToCan();
