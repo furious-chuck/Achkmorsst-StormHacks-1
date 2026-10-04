@@ -28,7 +28,7 @@ public class Main {
             Global.display.paintQueue = new Paintable[] { bm };
             Global.display.update();
             c.tick();
-            bm.statements.get(0).moveSelfAndAllChildrenBy(new RectVector(1, 0));
+            // bm.statements.get(0).moveSelfAndAllChildrenBy(new RectVector(1, 0));
         }
 
     }
