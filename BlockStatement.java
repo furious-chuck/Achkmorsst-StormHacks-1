@@ -33,7 +33,78 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
 
     @Override
     public Expression[] getChildExpressions() {
+        // never hand out a raw null array: callers iterate this contractually, and
+        // statements whose constructors don't populate childExpressions would
+        // otherwise blow up with an NPE mid-drag. Holes (nulls left by detached
+        // children) are preserved so slot indices stay aligned with setChildElement.
+        if (childExpressions == null) {
+            return new Expression[0];
+        }
         return childExpressions;
+    }
+
+    /**
+     * Finds the slot index of the given expression in this statement's direct child
+     * list. First checks the explicit childExpressions array (which may contain null
+     * holes after a detach), then falls back to the overridden getChildExpressions()
+     * contract used by containers like WhileLoop that store children in named fields.
+     */
+    protected int indexOfOwnChildExpression(Expression target) {
+        if (target == null) {
+            return -1;
+        }
+        if (childExpressions != null) {
+            for (int i = 0; i < childExpressions.length; i++) {
+                if (childExpressions[i] == target) {
+                    return i;
+                }
+            }
+        }
+        Expression[] kids = getChildExpressions();
+        for (int i = 0; i < kids.length; i++) {
+            if (kids[i] == target) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Removes the given child expression from this statement (clearing its slot and
+     * parent link) without affecting anything else. Default implementation works for
+     * statements that expose their children via getChildExpressions()/setChildElement;
+     * subclasses that keep children in private fields (Assigner) override this.
+     * Returns true if the child was found and removed.
+     */
+    public boolean removeDirectChildExpression(BlockExpression child) {
+        int index = indexOfOwnChildExpression(child);
+        if (index < 0) {
+            return false;
+        }
+        setChildElement(index, null);
+        // containers whose setChildElement doesn't clear the back-link themselves
+        // should still leave the child detached; double-clearing is harmless.
+        if (child.getParentExpression() == this) {
+            child.parentExpression = null;
+        }
+        return true;
+    }
+
+    /**
+     * Returns the slot index of an empty (null) child-expression slot, or -1 if all
+     * slots are filled. Used to snap a dragged atomic back into the first hole its
+     * parent left behind when it was detached.
+     */
+    public int getFirstEmptyChildSlot() {
+        Expression[] kids = getChildExpressions();
+        if (kids != null) {
+            for (int i = 0; i < kids.length; i++) {
+                if (kids[i] == null) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     public abstract double getCascadingHeight();
@@ -64,8 +135,14 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     public Hoverable findHoveredBlock(Vector mousePos) {
         if (this instanceof ExpressionPackingStatement eps) {
             double elementOffset = eps.leftSpace;
-            for (BlockExpression expression : eps.expressions) {
+            for (int i = 0; i < eps.expressions.length; i++) {
+                BlockExpression expression = eps.expressions[i];
                 if (expression == null) {
+                    // an empty slot is itself a droppable target: report the statement
+                    // containing it so a dragged atomic can be snapped back into this slot
+                    if (eps.slotContainsPoint(i, mousePos)) {
+                        return this;
+                    }
                     elementOffset += eps.defaultSize.getX() + eps.expressionSpacing;
                     continue;
                 }

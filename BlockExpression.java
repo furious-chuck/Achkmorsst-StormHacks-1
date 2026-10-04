@@ -91,14 +91,50 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         if (parentExpression == null) {
             return; // already a root, nothing to detach
         }
-        Expression[] siblings = parentExpression.getChildExpressions();
-        for (int i = 0; i < siblings.length; i++) {
-            if (siblings[i] == this) {
-                parentExpression.setChildElement(i, null); // clears our slot in the parent
-                break;
+        HasChildExpressions oldParent = parentExpression;
+        parentExpression = null;
+        if (oldParent instanceof BlockStatement bs) {
+            // statements may keep their children in private fields (Assigner) or
+            // expose them via getChildExpressions(); both are handled here.
+            bs.removeDirectChildExpression(this);
+        } else {
+            Expression[] siblings = oldParent.getChildExpressions();
+            for (int i = 0; i < siblings.length; i++) {
+                if (siblings[i] == this) {
+                    oldParent.setChildElement(i, null); // clears our slot in the parent
+                    break;
+                }
             }
         }
-        parentExpression = null;
+    }
+
+    /**
+     * Reattaches this expression into the given parent container at the specified
+     * slot index. This is the inverse of detachFromParent(): it sets up the parent
+     * link and packs us inside the parent's layout so the parent (and any outer
+     * containers above it) dynamically resize to accommodate us. The actual slot
+     * assignment (and position snap) is performed by the parent's setChildElement.
+     * <p>
+     * If this expression is currently packed inside a different parent, it is first
+     * detached from that parent (leaving an empty slot behind there). If it is
+     * already attached to the requested parent, we simply move to the new slot.
+     */
+    public void attachToParent(HasChildExpressions newParent, int childID) {
+        if (newParent == null) {
+            Util.unableToCan("cannot attach a block to a null parent");
+        }
+        if (childID < 0 || childID >= newParent.getChildExpressions().length) {
+            Util.unableToCan("slot index " + childID + " out of range for parent "
+                    + (newParent instanceof Hoverable h ? h.getBlockName() : newParent.getClass().getSimpleName()));
+        }
+        if (parentExpression != null && parentExpression != newParent) {
+            // moving from one parent to another: tear ourselves out of the old one first
+            detachFromParent();
+        }
+        // establish the back-link before the parent's setChildElement runs so that
+        // any cascading layout/resize triggered by it sees us as its child
+        parentExpression = newParent;
+        newParent.setChildElement(childID, this);
     }
 
 }

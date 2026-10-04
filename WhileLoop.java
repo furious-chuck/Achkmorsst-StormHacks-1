@@ -29,12 +29,26 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
     @Override
     public void setChildElement(int childID, Expression newExpression) {
         if (childID != 0) Util.unableToCan();
+        Expression old = condition;
         if (newExpression == null) {
+            // clearing the slot: detach the old child's parent link so it floats free
+            if (old instanceof BlockExpression beOld && beOld.getParentExpression() == this) {
+                beOld.parentExpression = null;
+            }
             condition = null;
             return;
         }
         if (!(newExpression instanceof BlockExpression)) Util.unableToCan();
         BlockExpression be = (BlockExpression) newExpression;
+        if (old != be) {
+            int previousIndex = indexOfChild(be);
+            if (previousIndex >= 0 && previousIndex != childID) {
+                condition = null;
+            }
+            if (old instanceof BlockExpression beOld && beOld.getParentExpression() == this) {
+                beOld.parentExpression = null;
+            }
+        }
         be.parentExpression = this;
         be.moveSelfAndAllChildrenTo(this.position.add(new RectVector(10, 10)));
         condition = be;
@@ -62,7 +76,10 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     @Override
     public double getCascadingWidth() {
-        return 0;
+        if (condition instanceof BlockExpression be) {
+            return 100 + be.getCascadingWidth();
+        }
+        return 100 + 50;
     }
 
     @Override
