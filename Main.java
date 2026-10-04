@@ -6,7 +6,7 @@ public class Main {
     public static void main(String[] args) {
 
         BlockStatement be = new VarDeclaration(new AtomicExpression.ClassBlock("potatopotato"), new AtomicExpression.Numbers.IntNumber(10), new AtomicExpression.Numbers.DoubleNumber(10.1));
-        BlockStatement ba = new Assigner(new AtomicExpression.StringExpression("hello"), new AtomicExpression.Numbers.DoubleNumber(1021));
+        BlockStatement ba = new Assigner(new AtomicExpression.StringExpression(""), new AtomicExpression.Numbers.DoubleNumber(1021));
 
         be.connectNextStatement(ba);
 
