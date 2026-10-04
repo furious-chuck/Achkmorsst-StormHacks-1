@@ -81,6 +81,20 @@ public class Inputs {
         return getHoveredBlock(blockManager, false);
     }
 
+    static HasEditableField getHoveredBlockWithEditableField(BlockManager blockManager) {
+        Hoverable hb = getHoveredBlock(blockManager);
+        if (hb instanceof HasEditableField hef) {
+            Vector pos = hef.getEditableFieldPos();
+            Vector cor = hef.getEditableFieldCorner();
+            if (pos.getX() < Inputs.mousePos.getX() && Inputs.mousePos.getX() < cor.getX() &&
+                pos.getY() < Inputs.mousePos.getY() && Inputs.mousePos.getY() < cor.getY()) {
+                
+                return hef;
+            }
+        }
+        return null;
+    }
+
     /**
      * Hover detection variant. When `duringDrag` is true, the block currently being
      * dragged (and its whole subtree) is excluded from the hit-test: while a drag is
