@@ -42,7 +42,7 @@ public class BlockManager implements Paintable {
         }
 
         String compilationResult = "public class Compiled {\npublic static void main(String[] args) {\n";
-        compilationResult += statements.get(0).cascadeCompile();
+        compilationResult += statements.getFirst().cascadeCompile();
         compilationResult += "}\n}";
         try {
             Files.write(Paths.get("CompiledFiles/Compiled.java"), compilationResult.getBytes());

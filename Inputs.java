@@ -67,13 +67,6 @@ public class Inputs {
     // put a merely-clicked block straight back into the exact hole it came from
     static HasChildExpressions originalParent = null;
     static int originalSlot = -1;
-    // the statement whose bottom connector the grabbed statement was plugged into at
-    // press time (null when it was the head of its stack), and the tail that hung
-    // below it; captured by splitChainAround() so a click-without-movement can undo
-    // the split exactly, and so dropping the torn-out middle back onto the upper
-    // part of its old stack can re-plug the leftover tail where it came from
-    static BlockStatement draggedStatementPredecessor = null;
-    static BlockStatement draggedStatementOriginalFollowing = null;
 
     /**
      * Determines whether the mouse is currently hovering over a block, and if so,
