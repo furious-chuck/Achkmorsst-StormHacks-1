@@ -13,7 +13,7 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     @Override
     public String compile() {
-        return "";
+        return "while (" + /*condition.compile()*/ "x < 10" + ") {\n" + cascadeStatementStorage.cascadeCompile() + "\n}\n";
     }
 
     @Override

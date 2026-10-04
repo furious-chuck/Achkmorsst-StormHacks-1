@@ -26,6 +26,8 @@ public class BlockManager implements Paintable {
     }
 
     public boolean canCompile() {
+        System.out.println(statements.size());
+        System.out.println(expressions.size());
         return (statements.size() == 1) && (expressions.isEmpty());
     }
 

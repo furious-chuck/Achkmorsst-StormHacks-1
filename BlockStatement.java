@@ -311,7 +311,8 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
             bs.moveSelfAndAllChildrenBy(positionChange);
         }
         if (this instanceof StatementContainer sc) {
-            ((BlockStatement) sc.getContainedStatement()).moveSelfAndAllChildrenBy(positionChange);
+            if (sc.getContainedStatement() != null) 
+                ((BlockStatement) sc.getContainedStatement()).moveSelfAndAllChildrenBy(positionChange);
         }
     }
 
@@ -366,7 +367,7 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     }
 
     public void connectNextStatement(BlockStatement nextStatement) {
-        nextStatement.moveSelfAndAllChildrenTo(this.position.add(new RectVector(0, getCascadingHeight())));
+        if (nextStatement != null) nextStatement.moveSelfAndAllChildrenTo(this.position.add(new RectVector(0, getCascadingHeight())));
         followingStatement = nextStatement;
     }
 

@@ -32,12 +32,23 @@ public class Main {
                 new AtomicExpression.Numbers.IntNumber(10)
         );
          */
-        BlockStatement bs = new VarDeclaration(new AtomicExpression.ClassBlock("int"), new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10));
-        BlockStatement print = new PrintCall(new AtomicExpression.StringExpression("Hello, world!"));
-        bs.connectNextStatement(print);
+        
+        BlockStatement decl = new VarDeclaration(new AtomicExpression.ClassBlock("int"), new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(0));
+        WhileLoop whloop = new WhileLoop(null, null, null);
+        BlockExpression xLessThan10 = new BinaryOperation(new Expression[] {new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10)}, "<");
+        BlockStatement printer = new PrintCall(new AtomicExpression.VarBlock("x"));
+        BlockStatement increaser = new Assigner(new AtomicExpression.VarBlock("x"), null, "+");
+        BlockExpression one = new AtomicExpression.Numbers.IntNumber(1);
+        
+        increaser.setChildElement(1, one);
+        printer.connectNextStatement(increaser);
+        whloop.connectConnectedStatement(printer);
+        whloop.setChildElement(0, xLessThan10);
+        decl.connectNextStatement(whloop);
+
         BlockManager bm = new BlockManager(
-                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { bs })),
-                new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {}))
+                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { decl })),
+                new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {  }))
         );
 
         Clock c = new Clock(10);
