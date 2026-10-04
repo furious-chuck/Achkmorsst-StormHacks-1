@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.util.ArrayList;
 
 public abstract class BlockStatement extends CascadeCompiledStatement implements Paintable, Hoverable {
 
@@ -366,8 +367,66 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     }
 
     public void connectNextStatement(BlockStatement nextStatement) {
+        if (nextStatement == null) {
+            return; // connecting nothing is a no-op, not a crash
+        }
         nextStatement.moveSelfAndAllChildrenTo(this.position.add(new RectVector(0, getCascadingHeight())));
         followingStatement = nextStatement;
+    }
+
+    /**
+     * The statement whose bottom connector this statement is currently plugged into,
+     * i.e. the statement directly above this one in some chain (searched across all
+     * given roots), or null when this statement is the head of its stack. Used by the
+     * drag logic so tearing a block out of the MIDDLE of a stack can re-plug the
+     * upper part onto whatever used to hang below it.
+     */
+    public BlockStatement getPrecedingStatementInStack(ArrayList<BlockStatement> roots) {
+        if (roots == null) {
+            return null;
+        }
+        for (BlockStatement root : roots) {
+            BlockStatement prev = getPrecedingStatementInChain(root);
+            if (prev != null) {
+                return prev;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Walks the following-statement chain rooted at `root` and returns the statement
+     * directly above this one, or null if this statement is not in that chain.
+     */
+    private BlockStatement getPrecedingStatementInChain(BlockStatement root) {
+        for (BlockStatement cur = root; cur != null; cur = cur.getFollowingBlockStatement()) {
+            if (cur.getFollowingBlockStatement() == this) {
+                return cur;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True when dropping this statement onto the bottom edge of `above` would be a
+     * legal connection: `above` must have nothing attached below it already ("a block
+     * can be connected at the bottom unless there is already a block occupying that
+     * space") and this statement must be the head of its own carried stack (its tail
+     * plugs into the dragged block's bottom, not into `above`).
+     */
+    public boolean canConnectBelow(BlockStatement above) {
+        return above != null && above != this
+                && above.getFollowingBlockStatement() == null;
+    }
+
+    /**
+     * True when dropping this statement so that `below` plugs into ITS bottom edge
+     * would be a legal connection: the space under this statement must be free and
+     * `below` must be the head of its own stack.
+     */
+    public boolean canConnectAbove(BlockStatement below) {
+        return getFollowingBlockStatement() == null
+                && below != null && below != this;
     }
 
     /**
