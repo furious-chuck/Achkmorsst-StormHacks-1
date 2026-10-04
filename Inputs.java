@@ -32,6 +32,11 @@ public class Inputs {
     // stack by splitChainAround(); endDrag() then decides whether to reconnect it
     // (dropped back on the chain) or keep the blocks separate (dropped away)
     static boolean draggedStatementWasSplit = false;
+    // true when the split-out statement still has a following-statement tail hanging
+    // below it: that tail travels WITH the block during the drag (pulling the middle
+    // of a chain drags everything beneath the grab point along), so handleDrag() must
+    // move the whole subtree instead of just the grabbed block itself
+    static boolean draggedStatementCarriesTail = false;
     // the following-statement tail the grabbed block carried when it was split out
     // of its old stack; kept so a drop onto empty space can restore it intact
     static BlockStatement draggedStatementTail = null;
@@ -154,6 +159,16 @@ public class Inputs {
             if (exp instanceof BlockExpression be && isWithinSubtree(be, block)) {
                 return true;
             }
+        }
+        // statements packed INSIDE this one as a body (e.g. the single statement of a
+        // WhileLoop's cascade storage) belong to this subtree just like chained ones:
+        // without this, grabbing such an inner statement would find no predecessor
+        // link to cut and the backend would keep seeing it connected to its container
+        if (root instanceof StatementContainer sc
+                && sc.getContainedStatement() instanceof BlockStatement inner
+                && inner != root
+                && isWithinStatement(inner, block)) {
+            return true;
         }
         if (root.followingStatement instanceof BlockStatement bs && isWithinStatement(bs, block)) {
             return true;
@@ -283,6 +298,29 @@ public class Inputs {
         // (containsPoint) and by moveSelfAndAllChildrenTo, so drag deltas must be
         // computed in the same coordinate space to keep the block glued to the cursor.
         Hoverable grabbed = getHoveredBlock(Display.activeBlockManager);
+        if (grabbed instanceof BlockExpression grabbedBe && Display.activeBlockManager != null) {
+            // Pressing on a STACKED statement must grab the STATEMENT, never an atomic
+            // expression merely packed inside it: Assigner-style blocks pack their
+            // name/value slots right across the middle of their own body, so the plain
+            // "deepest block wins" hover frequently reports the StringExpression "b"
+            // instead of the Assigner underneath it. Grabbing that atomic detaches it
+            // from its parent and drags only the tiny word around — the second block
+            // of A->B->C then visually stays put while its tail C is left hanging in
+            // mid-air, exactly the "third block doesn't follow the second one when I
+            // drag it away" bug. If the press point also lies inside the bounds of the
+            // statement this atomic is genuinely packed in, promote the grab to that
+            // statement: the user meant to move the whole block. Atomics floating over
+            // empty space or foreign containers keep going through the detach path.
+            HasChildExpressions packedIn = grabbedBe.getParentExpression();
+            if (packedIn instanceof BlockStatement ownerBs
+                    && ownerBs == findStatementOwner(grabbedBe)) {
+                double worldX = mousePos.getX() + Global.cameraPos.getX();
+                double worldY = mousePos.getY() + Global.cameraPos.getY();
+                if (ownerBs.containsPoint(new RectVector(worldX, worldY))) {
+                    grabbed = ownerBs;
+                }
+            }
+        }
         if (grabbed != null) {
             currentlyDraggingABlock = true;
             draggedBlockIsDetached = false;
@@ -361,6 +399,16 @@ public class Inputs {
                         draggedBlock = grabbed;
                     } else {
                         splitChainAround(grabbedBs, Display.activeBlockManager);
+                        // The tail hanging below the grabbed block travels WITH it —
+                        // pulling the middle of a chain drags everything beneath the
+                        // grab point along, Scratch-style. So the grabbed statement is
+                        // now the head of its own subtree and the drag must move that
+                        // whole subtree (packed children + following chain), not just
+                        // the single block. Without this, grabbing the second block of
+                        // A->B->C left C visually stranded in mid-air while B floated
+                        // away with nothing attached to it.
+                        draggedStatementCarriesTail = draggedStatementWasSplit
+                                && grabbedBs.getFollowingBlockStatement() != null;
                     }
                 }
             }
@@ -422,6 +470,51 @@ public class Inputs {
         //    stays reachable through `grabbed`, which step 2 promoted to a root.)
 
         draggedStatementWasSplit = split;
+    }
+
+    /**
+     * Returns the top-level BlockStatement root whose subtree (packed statements,
+     * nested container bodies and following-statement chains) contains the given
+     * expression via statement parent links, or null when the expression is not
+     * packed inside any managed statement at all (e.g. it lives directly inside a
+     * free-floating expression, or floats over empty canvas). Used by grab-time
+     * promotion so pressing on an atomic word that sits inside a stacked block
+     * grabs the whole block instead of detaching just the word.
+     */
+    private static BlockStatement findStatementOwner(BlockExpression be) {
+        if (Display.activeBlockManager == null) {
+            return null;
+        }
+        for (BlockStatement root : Display.activeBlockManager.statements) {
+            if (statementSubtreeContains(root, be)) {
+                return root;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True when `target` is packed somewhere inside the statement tree rooted at
+     * `root`: as one of its direct child expressions, inside a nested container's
+     * body, or anywhere in its following-statement chain.
+     */
+    private static boolean statementSubtreeContains(BlockStatement root, BlockExpression target) {
+        for (Expression exp : root.getChildExpressions()) {
+            if (exp instanceof BlockExpression be && isWithinSubtree(be, target)) {
+                return true;
+            }
+        }
+        if (root instanceof StatementContainer sc
+                && sc.getContainedStatement() instanceof BlockStatement inner
+                && inner != root
+                && statementSubtreeContains(inner, target)) {
+            return true;
+        }
+        if (root.followingStatement instanceof BlockStatement next
+                && statementSubtreeContains(next, target)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -562,13 +655,17 @@ public class Inputs {
                     }
                 }
             } else if (draggedBlock instanceof BlockStatement bs) {
-                if (draggedStatementWasSplit) {
+                if (draggedStatementWasSplit && !draggedStatementCarriesTail) {
                     // the grabbed statement was torn out of its old stack at press
-                    // time: only move IT (paint/hit-testing lay its packed children
-                    // out from its live position), so the chain it left behind stays
-                    // exactly where it was instead of being dragged along too
+                    // time AND nothing hangs below it: only move IT (paint/hit-testing
+                    // lay its packed children out from its live position), so the rest
+                    // of the canvas stays exactly where it was
                     bs.moveSelfOnlyTo(target);
                 } else {
+                    // either a whole connected tree is being dragged (never split), or
+                    // the split-out block carries its following-statement tail with it:
+                    // pulling the middle of A->B->C must drag B *and* C away together,
+                    // keeping them stacked, instead of stranding C in mid-air
                     bs.moveSelfAndAllChildrenTo(target);
                 }
             } else if (draggedBlock instanceof BlockExpression be) {
@@ -732,6 +829,7 @@ public class Inputs {
         lastDropTarget = null;
         draggedBlockIsDetached = false;
         draggedStatementWasSplit = false;
+        draggedStatementCarriesTail = false;
         draggedStatementTail = null;
         currentlyDraggingABlock = false;
         originallyGrabbedBlock = null;
