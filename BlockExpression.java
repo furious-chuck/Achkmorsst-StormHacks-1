@@ -36,12 +36,24 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         return getClass().getSimpleName();
     }
 
+    /**
+     * The world-space rectangle paint() actually draws this expression in. Atomic
+     * expressions are inset by 5px on the top/left inside their slot bounds (see
+     * AtomicExpression.paint), so hit-testing must use this box instead of the raw
+     * `position` — otherwise a few pixels around the block claim to be hovered while
+     * looking empty, and vice versa.
+     */
+    public Vector getPaintedPosition() {
+        return position;
+    }
+
     @Override
     public boolean containsPoint(Vector p) {
-        return p.getX() >= position.getX() &&
-               p.getX() <= position.getX() + getCascadingWidth() &&
-               p.getY() >= position.getY() &&
-               p.getY() <= position.getY() + getCascadingHeight();
+        Vector painted = getPaintedPosition();
+        return p.getX() >= painted.getX() &&
+               p.getX() <= painted.getX() + getCascadingWidth() &&
+               p.getY() >= painted.getY() &&
+               p.getY() <= painted.getY() + getCascadingHeight();
     }
 
     /**
@@ -50,18 +62,22 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
      */
     @Override
     public Hoverable findHoveredBlock(Vector mousePos) {
+        // only blocks actually packed inside us may claim this point: a free-floating
+        // (detached/dragged) expression that happens to sit on top of us is NOT one of
+        // our children, so it must not shadow us as a hover/drop target.
+        if (!containsPoint(mousePos)) {
+            return null;
+        }
+        // search our own nested children first so the deepest block wins
         for (Expression exp : getChildExpressions()) {
-            if (exp instanceof BlockExpression be) {
+            if (exp instanceof BlockExpression be && be.containsPoint(mousePos)) {
                 Hoverable found = be.findHoveredBlock(mousePos);
                 if (found != null) {
                     return found;
                 }
             }
         }
-        if (containsPoint(mousePos)) {
-            return this;
-        }
-        return null;
+        return this;
     }
 
     // public abstract double getCascadingHeight();
@@ -91,14 +107,88 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         if (parentExpression == null) {
             return; // already a root, nothing to detach
         }
-        Expression[] siblings = parentExpression.getChildExpressions();
-        for (int i = 0; i < siblings.length; i++) {
-            if (siblings[i] == this) {
-                parentExpression.setChildElement(i, null); // clears our slot in the parent
-                break;
+        HasChildExpressions oldParent = parentExpression;
+        parentExpression = null;
+        if (oldParent instanceof BlockStatement bs) {
+            // statements may keep their children in private fields (Assigner) or
+            // expose them via getChildExpressions(); both are handled here.
+            bs.removeDirectChildExpression(this);
+        } else {
+            Expression[] siblings = oldParent.getChildExpressions();
+            for (int i = 0; i < siblings.length; i++) {
+                if (siblings[i] == this) {
+                    oldParent.setChildElement(i, null); // clears our slot in the parent
+                    break;
+                }
             }
         }
+        // whatever happens above, we must never stay registered as a child of the old
+        // parent: if we did, that parent would keep painting us inside its own shape
+        // (a clone) while we are simultaneously drawn at our dragged position.
+        int leftoverIndex = oldParent.indexOfChild(this);
+        if (leftoverIndex >= 0) {
+            oldParent.setChildElement(leftoverIndex, null);
+        }
         parentExpression = null;
+
+        // safety net: if none of the paths above actually blanked our slot (e.g. an
+        // exotic parent whose setChildElement doesn't clear the back-link), force the
+        // link off now that we are logically detached. Without this, the old parent
+        // still thinks we live in one of its slots and paints us there *instead of*
+        // walking us as a free root — the block visually vanishes from the canvas the
+        // instant the mouse goes down even though it is being dragged around invisibly.
+        if (wasPackedIn(oldParent)) {
+            oldParent.forceRemoveChildLink(this);
+        }
+    }
+
+    /**
+     * True if this expression is still registered as a direct child of the given
+     * container after a detach attempt (i.e. the container's slot still points at us).
+     */
+    private boolean wasPackedIn(HasChildExpressions maybeParent) {
+        if (maybeParent == null) {
+            return false;
+        }
+        Expression[] kids = maybeParent.getChildExpressions();
+        if (kids == null) {
+            return false;
+        }
+        for (Expression kid : kids) {
+            if (kid == this) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Reattaches this expression into the given parent container at the specified
+     * slot index. This is the inverse of detachFromParent(): it sets up the parent
+     * link and packs us inside the parent's layout so the parent (and any outer
+     * containers above it) dynamically resize to accommodate us. The actual slot
+     * assignment (and position snap) is performed by the parent's setChildElement.
+     * <p>
+     * If this expression is currently packed inside a different parent, it is first
+     * detached from that parent (leaving an empty slot behind there). If it is
+     * already attached to the requested parent, we simply move to the new slot.
+     */
+    public void attachToParent(HasChildExpressions newParent, int childID) {
+        if (newParent == null) {
+            Util.unableToCan("cannot attach a block to a null parent");
+        }
+        if (childID < 0 || childID >= newParent.getChildExpressions().length) {
+            Util.unableToCan("slot index " + childID + " out of range for parent "
+                    + (newParent instanceof Hoverable h ? h.getBlockName() : newParent.getClass().getSimpleName()));
+        }
+        if (parentExpression != null && parentExpression != newParent) {
+            // moving from one parent to another: tear ourselves out of the old one first
+            detachFromParent();
+        }
+        // establish the back-link before the parent's setChildElement runs so that
+        // any cascading layout/resize triggered by it sees us as its child
+        parentExpression = newParent;
+        newParent.setChildElement(childID, this);
     }
 
 }

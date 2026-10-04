@@ -11,9 +11,21 @@ public interface Hoverable {
     double getCascadingHeight();
 
     /**
-     * Returns true if the given world-space point lies within this block's bounding box.
+     * True if the given world-space point lies within this block's bounding box.
+     * Implementations must test the exact rectangle paint() draws: expressions that
+     * inset their artwork inside their slot bounds (see AtomicExpression) override
+     * getPaintedPosition() so hover/drag hit-testing matches what is on screen.
      */
     boolean containsPoint(Vector p);
+
+    /**
+     * The world-space top-left of the rectangle this block actually paints itself in.
+     * Defaults to the block's logical position; blocks whose artwork is offset inside
+     * their bounds return the offset corner so hit-testing follows paint().
+     */
+    default Vector getPaintedPosition() {
+        return getPosition();
+    }
 
     /**
      * Finds the innermost hoverable block under the given world-space mouse position:
@@ -47,4 +59,5 @@ public interface Hoverable {
         }
         return current;
     }
+
 }

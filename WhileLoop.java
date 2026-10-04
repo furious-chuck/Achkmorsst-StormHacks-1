@@ -29,18 +29,62 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
     @Override
     public void setChildElement(int childID, Expression newExpression) {
         if (childID != 0) Util.unableToCan();
+        Expression old = condition;
         if (newExpression == null) {
+            // clearing the slot: detach the old child's parent link so it floats free
+            if (old instanceof BlockExpression beOld && beOld.getParentExpression() == this) {
+                beOld.parentExpression = null;
+            }
             condition = null;
             return;
         }
         if (!(newExpression instanceof BlockExpression)) Util.unableToCan();
         BlockExpression be = (BlockExpression) newExpression;
+        if (old != be) {
+            int previousIndex = indexOfChild(be);
+            if (previousIndex >= 0 && previousIndex != childID) {
+                condition = null;
+            }
+            if (old instanceof BlockExpression beOld && beOld.getParentExpression() == this) {
+                beOld.parentExpression = null;
+            }
+        }
         be.parentExpression = this;
         be.moveSelfAndAllChildrenTo(this.position.add(new RectVector(10, 10)));
         condition = be;
         if (cascadeStatementStorage instanceof BlockStatement bs) {
             bs.moveSelfAndAllChildrenTo(position.add(new RectVector(10, 10 + getHeaderCascadingHeight())));
         }
+    }
+
+    /**
+     * True when the while-loop's condition slot currently holds an expression.
+     */
+    public boolean hasCondition() {
+        return condition != null;
+    }
+
+    /**
+     * Returns true if the given world-space point lies within the bounding box of the
+     * current condition expression (its live position, which setChildElement keeps in
+     * sync with this loop). Used by drag/drop so a dragged block floating over the
+     * loop's body gap is not mistaken for a drop onto the condition.
+     */
+    public boolean conditionContainsPoint(Vector p) {
+        return condition instanceof BlockExpression be && be.containsPoint(p);
+    }
+
+    /**
+     * Returns true if the given world-space point lies within this loop's header band
+     * (position.y .. position.y + header height), i.e. the strip where the condition
+     * slot lives — as opposed to the cascaded body area below it. Mirrors the same
+     * geometry paint() uses for the shape-with-gap.
+     */
+    public boolean headerContainsPoint(Vector p) {
+        return p.getX() >= position.getX() &&
+               p.getX() <= position.getX() + getCascadingWidth() &&
+               p.getY() >= position.getY() &&
+               p.getY() <= position.getY() + getHeaderCascadingHeight();
     }
 
     private double getHeaderCascadingHeight() {
