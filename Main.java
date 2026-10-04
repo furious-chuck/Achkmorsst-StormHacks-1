@@ -33,7 +33,7 @@ public class Main {
         );
          */
         BlockManager bm;
-        if (args.length == 1) {
+        if (args.length != 1) {
             BlockStatement decl = new VarDeclaration(new AtomicExpression.ClassBlock("int"), new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(0));
             WhileLoop whloop = new WhileLoop(null, null, null);
             BlockExpression xLessThan10 = new BinaryOperation(new Expression[] {new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10)}, "<");
