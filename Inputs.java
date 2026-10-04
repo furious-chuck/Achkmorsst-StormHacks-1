@@ -7,7 +7,11 @@ public class Inputs {
         wHeld,
         aHeld,
         sHeld,
-        dHeld;
+        dHeld,
+        upHeld,
+        downHeld,
+        leftHeld,
+        rightHeld;
 
     static Vector mousePos = new RectVector(0, 0);
     static boolean mouseHeld = false;
@@ -46,6 +50,9 @@ public class Inputs {
     static Vector dragStartMousePos = null;
     // world-space position of the grabbed block when the drag started
     static Vector dragStartBlockPos = null;
+    // camera position when the drag started; if the camera scrolls mid-drag the
+    // block is shifted by the same amount so it stays glued to the cursor
+    static Vector dragStartCameraPos = null;
     // the block (if any) the mouse was hovering over on the previous frame during
     // a drag, used to log drop-target changes without spamming the terminal
     static Hoverable lastDropTarget = null;
@@ -79,20 +86,6 @@ public class Inputs {
      */
     static Hoverable getHoveredBlock(BlockManager blockManager) {
         return getHoveredBlock(blockManager, false);
-    }
-
-    static HasEditableField getHoveredBlockWithEditableField(BlockManager blockManager) {
-        Hoverable hb = getHoveredBlock(blockManager);
-        if (hb instanceof HasEditableField hef) {
-            Vector pos = hef.getEditableFieldPos();
-            Vector cor = hef.getEditableFieldCorner();
-            if (pos.getX() < Inputs.mousePos.getX() && Inputs.mousePos.getX() < cor.getX() &&
-                pos.getY() < Inputs.mousePos.getY() && Inputs.mousePos.getY() < cor.getY()) {
-                
-                return hef;
-            }
-        }
-        return null;
     }
 
     /**
@@ -429,6 +422,7 @@ public class Inputs {
 
             dragStartMousePos = mousePos.clone();
             dragStartBlockPos = draggedBlock.getPosition().clone();
+            dragStartCameraPos = Global.cameraPos.clone();
             System.out.println("started dragging block: " + draggedBlock.getBlockName());
         } else {
             currentlyDraggingABlock = false;
@@ -641,7 +635,10 @@ public class Inputs {
         // --- mid-drag: follow the cursor ---
         if (draggedBlock != null && mouseHeld) {
             Vector delta = mousePos.subtract(dragStartMousePos);
-            Vector target = dragStartBlockPos.add(delta);
+            // add how far the camera has scrolled since the grab so the block keeps
+            // following the cursor while the arrow keys are held
+            Vector cameraShift = Global.cameraPos.subtract(dragStartCameraPos);
+            Vector target = dragStartBlockPos.add(delta).add(cameraShift);
             if (draggedBlockIsDetached && draggedBlock instanceof BlockExpression be) {
                 // detached atomic: its position is recomputed from the parent's slot
                 // layout every frame while packed, but now that it is a free root we
@@ -664,6 +661,7 @@ public class Inputs {
                     originallyGrabbedBlock = be;
                     dragStartMousePos = mousePos.clone();
                     dragStartBlockPos = be.getPosition().clone();
+                    dragStartCameraPos = Global.cameraPos.clone();
                     if (!blockManager.expressions.contains(be)) {
                         blockManager.expressions.add(be);
                     }

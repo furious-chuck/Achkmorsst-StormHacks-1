@@ -12,6 +12,7 @@ public class BlockManager implements Paintable {
     ArrayList<BlockExpression> expressions;
     SideBar sidebar = new SideBar();
 
+
     StaticScreenPosButton[] buttons = new StaticScreenPosButton[] {
             new StaticScreenPosButton(new RectVector(225, 75), "To .java"),
             new StaticScreenPosButton(new RectVector(325, 75), "To .class"),
@@ -38,7 +39,7 @@ public class BlockManager implements Paintable {
                 compiledFile.createNewFile();
             }
         } catch (IOException e) {
-            Util.unableToCan();
+            Util.unableToCan(e.getMessage());
         }
 
         String compilationResult = "public class Compiled {\npublic static void main(String[] args) {\n";
@@ -59,8 +60,10 @@ public class BlockManager implements Paintable {
 
     public void compileAndRun() {
         compileTwice();
-        Terminal.executeCommand("java Compiled");
+        Terminal.executeCommand("java CompiledFiles/Compiled");
         //todo: output result (new display?), add way to fail.
+        Global.display.pushMessage("--------------");
+        Global.display.pushMessage("Running your code...");
     }
 
     // todo: finis the compileTwice function that compiles .java file as well.

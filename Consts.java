@@ -9,10 +9,10 @@ public class Consts {
 
     static final int EXAMPLE_TYPE = 1; //THIS IS TEMPORARY, when block types are made rename this
 
+    // how many world pixels the camera moves per frame while an arrow key is held
+    static final double CAMERA_SPEED = 20;
+
     static final int LETTER_WIDTH = 7;
     static final int LETTER_HEIGHT = 10;
-
-    static final int SIDEBAR_LEFT_OFFSET = 3;
-    static final int SIDEBAR_BUTTON_GAP = 3;
 
 }

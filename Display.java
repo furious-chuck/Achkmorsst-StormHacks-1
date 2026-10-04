@@ -1,6 +1,8 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferStrategy;
+import java.util.ArrayList;
+
 import javax.swing.*;
 import javax.swing.event.MouseInputListener;
 
@@ -13,12 +15,19 @@ class Display extends JFrame {
     Graphics g;
 
     Color bgColor = Color.WHITE;
+    ArrayList<OutputMessage> messages = new ArrayList<>();
 
     Paintable[] paintQueue = {};
 
     // set by Main so the update loop can test mouse-hover against all blocks
     static BlockManager activeBlockManager = null;
 
+    public void pushMessage(String message) {
+        for (OutputMessage outmsg : messages) {
+            outmsg.pushUp();
+        }
+        messages.add(new OutputMessage(message));
+    }
 
     public Display(String name) {
 
@@ -66,6 +75,18 @@ class Display extends JFrame {
                 case "D":
                     Inputs.dHeld = true;
                     break;
+                case "Up":
+                    Inputs.upHeld = true;
+                    break;
+                case "Down":
+                    Inputs.downHeld = true;
+                    break;
+                case "Left":
+                    Inputs.leftHeld = true;
+                    break;
+                case "Right":
+                    Inputs.rightHeld = true;
+                    break;
                 default:
                     break;
             }
@@ -86,6 +107,18 @@ class Display extends JFrame {
                     break;
                 case "D":
                     Inputs.dHeld = false;
+                    break;
+                case "Up":
+                    Inputs.upHeld = false;
+                    break;
+                case "Down":
+                    Inputs.downHeld = false;
+                    break;
+                case "Left":
+                    Inputs.leftHeld = false;
+                    break;
+                case "Right":
+                    Inputs.rightHeld = false;
                     break;
                 default:
                     break;
@@ -156,12 +189,19 @@ class Display extends JFrame {
         for (Paintable paintable : paintQueue) {
             paintable.paint(g);
         }
+        g.setColor(Color.BLACK);
+        for (Paintable paintable : messages) {
+            paintable.paint(g);
+        }
         g.dispose();
         bs.show();
         paintQueue = new Paintable[0];
     }
 
     public void update() {
+        // move the camera first so hover/drag/paint all see the same position this frame
+        Camera.update();
+
         Point mouseCoor = MouseInfo.getPointerInfo().getLocation();
         SwingUtilities.convertPointFromScreen(mouseCoor, this);
         Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
@@ -179,6 +219,25 @@ class Display extends JFrame {
 
         Inputs.mousePressed = Inputs.mouseHeld && ! Inputs.mousePressed;
         Inputs.mouseHeldLastFrame = Inputs.mouseHeld;
+    }
+
+    private static class OutputMessage implements Paintable {
+        String message;
+        double verticalPosition;
+        public OutputMessage(String message, double verticalPosition) {
+            this.message = message;
+            this.verticalPosition = verticalPosition;
+        }
+        public OutputMessage(String message) {
+            this(message, Consts.WINDOW_HEIGHT - 10);
+        }
+        public void pushUp() {
+            this.verticalPosition -= Consts.LETTER_HEIGHT + 10;
+        }
+        @Override 
+        public void paint(Graphics g) {
+            g.drawString(message, 10, (int) verticalPosition);
+        }
     }
 
 }
