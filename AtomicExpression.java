@@ -175,6 +175,58 @@ public abstract class AtomicExpression extends BlockExpression {
         }
     }
 
+    public static class Boolean {
+        private Boolean() {}
+
+        public static class True extends AtomicExpression {
+
+            @Override
+            public String compile() {
+                return "true";
+            }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
+            }
+
+            @Override
+            public double getValueWidth() {
+                return Consts.LETTER_WIDTH * 5;
+            }
+
+            @Override
+            public String getValueString() {
+                return "true";
+            }
+            
+        }
+
+        public static class False extends AtomicExpression {
+
+            @Override
+            public String compile() {
+                return "false";
+            }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
+            }
+
+            @Override
+            public double getValueWidth() {
+                return Consts.LETTER_WIDTH * 5;
+            }
+
+            @Override
+            public String getValueString() {
+                return "false";
+            }
+            
+        }
+    }
+
     public static class ClassBlock extends AtomicExpression {
         String stringContents;
         public ClassBlock(String stringContents) {
