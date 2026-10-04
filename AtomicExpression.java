@@ -124,6 +124,7 @@ public abstract class AtomicExpression extends BlockExpression {
     public static class StringExpression extends AtomicExpression {
         String stringContents;
         public StringExpression(String stringContents) {
+            this.stringContents = "";
             for (int i = 0; i < stringContents.length(); i++) {
                 // ALL OF THIS MAY BE COMPLETELY BROKEN STRINGS SUCK ANYWAY THO SO ITS OKAY
                 if (stringContents.charAt(i) == '"') this.stringContents += "\\";
