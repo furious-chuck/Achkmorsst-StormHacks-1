@@ -5,7 +5,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        /*
+        
         BlockStatement bs = new VarDeclaration(new AtomicExpression.ClassBlock("int"), new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10));
         BlockStatement ba = new Assigner(new AtomicExpression.StringExpression("second"), new AtomicExpression.Numbers.DoubleNumber(1021));
         BlockStatement bt = new Assigner(new AtomicExpression.StringExpression("third"), new AtomicExpression.Numbers.DoubleNumber(9));
@@ -16,14 +16,14 @@ public class Main {
 
         BlockStatement b1 = new Assigner(new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10), "+");
         bs.connectNextStatement(b1);
-        */
+        /*
         BlockExpression be = new AtomicExpression.VarBlock("x");
         BlockStatement bs = new Assigner(new AtomicExpression.VarBlock("x"), new AtomicExpression.StringExpression("Hello"));
         BlockStatement ba = new Assigner(new AtomicExpression.StringExpression("second"), new AtomicExpression.Numbers.DoubleNumber(1021));
         BlockStatement bsba = new Assigner(new AtomicExpression.StringExpression("third"), new AtomicExpression.Numbers.DoubleNumber(9));
         bs.connectNextStatement(bsba);
         BlockStatement we = new WhileLoop(be, bs, ba);
-
+        */
         /*
         BlockStatement as = new VarDeclaration(
                 new AtomicExpression.ClassBlock("int"),
@@ -32,7 +32,7 @@ public class Main {
         );
          */
         BlockManager bm = new BlockManager(
-                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { we })),
+                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { bs })),
                 new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {}))
         );
 
