@@ -91,14 +91,21 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         if (parentExpression == null) {
             return; // already a root, nothing to detach
         }
-        Expression[] siblings = parentExpression.getChildExpressions();
-        for (int i = 0; i < siblings.length; i++) {
-            if (siblings[i] == this) {
-                parentExpression.setChildElement(i, null); // clears our slot in the parent
-                break;
+        HasChildExpressions oldParent = parentExpression;
+        parentExpression = null;
+        if (oldParent instanceof BlockStatement bs) {
+            // statements may keep their children in private fields (Assigner) or
+            // expose them via getChildExpressions(); both are handled here.
+            bs.removeDirectChildExpression(this);
+        } else {
+            Expression[] siblings = oldParent.getChildExpressions();
+            for (int i = 0; i < siblings.length; i++) {
+                if (siblings[i] == this) {
+                    oldParent.setChildElement(i, null); // clears our slot in the parent
+                    break;
+                }
             }
         }
-        parentExpression = null;
     }
 
     /**
