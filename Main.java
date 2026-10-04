@@ -19,7 +19,10 @@ public class Main {
         );
 
         Clock c = new Clock(10);
-        
+
+        // give the display a reference to the block manager so each frame it can
+        // detect which block (if any) the mouse is hovering over and print it
+        Global.display.activeBlockManager = bm;
 
         for (int i = 0; i < 1080; i++) {
             Global.display.paintQueue = new Paintable[] { bm };

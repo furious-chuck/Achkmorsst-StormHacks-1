@@ -1,6 +1,6 @@
 import java.awt.*;
 
-public abstract class BlockStatement extends CascadeCompiledStatement implements Paintable {
+public abstract class BlockStatement extends CascadeCompiledStatement implements Paintable, Hoverable {
 
     Vector position = new RectVector(); // note: position should be disregarded whenever this is attached to something else!
 
@@ -11,6 +11,24 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     public String text;
     public Expression[] childExpressions;
 
+    @Override
+    public Vector getPosition() {
+        return position;
+    }
+
+    /**
+     * Statement roots have no parent block, so they are their own root ancestor.
+     */
+    @Override
+    public Hoverable getParentBlock() {
+        return null;
+    }
+
+    @Override
+    public String getBlockName() {
+        return getClass().getSimpleName();
+    }
+
     // public double getMaxChildHeight
 
     @Override
@@ -20,6 +38,67 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
 
     public abstract double getCascadingHeight();
     public abstract double getCascadingWidth();
+
+    /**
+     * Returns true if the given world-space point lies within this block's bounding
+     * rectangle (position .. position + cascading size). Children are excluded: they
+     * are checked separately so the deepest (most specific) block wins.
+     */
+    @Override
+    public boolean containsPoint(Vector p) {
+        return p.getX() >= position.getX() &&
+               p.getX() <= position.getX() + getCascadingWidth() &&
+               p.getY() >= position.getY() &&
+               p.getY() <= position.getY() + getCascadingHeight();
+    }
+
+    /**
+     * Finds the innermost hoverable block under the given world-space mouse position.
+     * The child expressions are laid out relative to this statement at paint time, so
+     * we recompute their current slots here (same convention as paint()) and search
+     * them first, so the deepest/most specific block wins. Then we check our own shape,
+     * and finally walk down the connected following-statement chain.
+     * Returns null if the mouse is not hovering over any block.
+     */
+    @Override
+    public Hoverable findHoveredBlock(Vector mousePos) {
+        if (this instanceof ExpressionPackingStatement eps) {
+            double elementOffset = eps.leftSpace;
+            for (BlockExpression expression : eps.expressions) {
+                if (expression == null) {
+                    elementOffset += eps.defaultSize.getX() + eps.expressionSpacing;
+                    continue;
+                }
+                // child slot computed from the parent's current position, matching paint()
+                Vector previousPosition = expression.position;
+                expression.position = position.add(new RectVector(elementOffset, 10));
+                Hoverable found = expression.findHoveredBlock(mousePos);
+                expression.position = previousPosition;
+                if (found != null) {
+                    return found;
+                }
+                elementOffset += expression.getCascadingWidth() + eps.expressionSpacing;
+            }
+        } else {
+            for (Expression exp : getChildExpressions()) {
+                if (exp instanceof BlockExpression be) {
+                    Hoverable found = be.findHoveredBlock(mousePos);
+                    if (found != null) {
+                        return found;
+                    }
+                }
+            }
+        }
+        // then our own shape
+        if (containsPoint(mousePos)) {
+            return this;
+        }
+        // finally, any statement connected below us
+        if (followingStatement instanceof BlockStatement bs) {
+            return bs.findHoveredBlock(mousePos);
+        }
+        return null;
+    }
 
     public void moveSelfAndAllChildrenBy(Vector positionChange) {
         position = position.add(positionChange);

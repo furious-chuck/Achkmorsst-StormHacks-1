@@ -16,6 +16,9 @@ class Display extends JFrame {
 
     Paintable[] paintQueue = {};
 
+    // set by Main so the update loop can test mouse-hover against all blocks
+    static BlockManager activeBlockManager = null;
+
 
     public Display(String name) {
 
@@ -57,6 +60,8 @@ class Display extends JFrame {
             int button = e.getButton();
             if (button == MouseEvent.BUTTON1) {
                 Inputs.mouseHeld = true;
+                // grab whatever block is under the cursor (if any) and begin dragging
+                Inputs.handleDragStart();
             }
         }
 
@@ -65,6 +70,7 @@ class Display extends JFrame {
             int button = e.getButton();
             if (button == MouseEvent.BUTTON1) {
                 Inputs.mouseHeld = false;
+                // the next frame's Inputs.handleDrag() will drop the grabbed block
             }
         }
 
@@ -108,6 +114,14 @@ class Display extends JFrame {
         Point mouseCoor = MouseInfo.getPointerInfo().getLocation();
         SwingUtilities.convertPointFromScreen(mouseCoor, this);
         Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
+
+        // determine whether the mouse is hovering over a block (and which one);
+        // prints hover enter/leave messages to the terminal
+        Inputs.getHoveredBlock(activeBlockManager);
+
+        // press -> grab, hold -> move with cursor, release -> drop
+        Inputs.handleDrag(activeBlockManager);
+
         display();
 
         Inputs.mousePressed = Inputs.mouseHeld && ! Inputs.mousePressed;
