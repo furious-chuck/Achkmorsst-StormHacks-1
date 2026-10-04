@@ -278,12 +278,33 @@ public class Inputs {
 
         // try to snap a free-floating atomic back into the container it was dropped on
         if (draggedBlock instanceof BlockExpression be && be.getParentExpression() == null) {
-            Vector grabPoint = new RectVector(
-                    mousePos.getX() + Global.cameraPos.getX(),
-                    mousePos.getY() + Global.cameraPos.getY());
+            // The cursor position is only an approximation of where the block ended up:
+            // the drag delta is computed from the raw (unconverted) screen coordinates,
+            // which can carry a constant offset relative to the window-relative mouse
+            // position. Anchor the hit-test on the block's ACTUAL current position
+            // instead — its top-left corner plus half its size, i.e. its center — so the
+            // drop lands in whatever container/slot the block itself is really sitting in.
+            Vector grabPoint = be.getPosition().add(
+                    new RectVector(be.getCascadingWidth() / 2.0, be.getCascadingHeight() / 2.0));
             HasChildExpressions newParent = findReattachSlot(blockManager, be, grabPoint);
+            if (newParent == null) {
+                // second chance: the block may overlap a container's slot even though its
+                // center misses it — test every corner of the dragged block's bounding box
+                for (int i = 0; newParent == null && i < 4; i++) {
+                    double cx = (i % 2 == 0) ? be.getPosition().getX()
+                            : be.getPosition().getX() + be.getCascadingWidth();
+                    double cy = (i < 2) ? be.getPosition().getY()
+                            : be.getPosition().getY() + be.getCascadingHeight();
+                    newParent = findReattachSlot(blockManager, be, new RectVector(cx, cy));
+                }
+            }
             if (newParent != null) {
                 int slot = slotIndexFor(newParent, be, grabPoint);
+                if (slot < 0) {
+                    // no exact slot matched the anchor point; fall back to the first hole
+                    // the container has (or its single slot for containers like WhileLoop)
+                    slot = fallbackSlotFor(newParent);
+                }
                 if (slot >= 0) {
                     // remember who (if anyone) occupies that slot: attachToParent will
                     // displace them and clear their parent link, so they must become a
@@ -386,15 +407,43 @@ public class Inputs {
                 return epe;
             }
         } else if (block instanceof WhileLoop wl) {
-            // only offer the condition slot when the cursor is actually over the header
-            // row (or the empty condition placeholder itself), never over the body gap
-            boolean overConditionRow = wl.conditionContainsPoint(worldMousePos)
-                    || (!wl.hasCondition() && wl.headerContainsPoint(worldMousePos));
-            if (!wl.hasCondition() && overConditionRow && slotAcceptsType(dragged, null)) {
+            // The condition slot accepts a block when the cursor is over the header row.
+            // An empty condition slot is always droppable from the header; an occupied
+            // one also accepts a same-typed replacement dropped directly onto it (the
+            // incumbent gets displaced to a free root by endDrag). Never offer the slot
+            // when the cursor is over the body gap below the header.
+            boolean overHeader = wl.headerContainsPoint(worldMousePos);
+            boolean overCondition = wl.conditionContainsPoint(worldMousePos);
+            if ((overHeader || overCondition) && slotAcceptsType(dragged, wl.condition)) {
                 return wl;
             }
         }
         return null;
+    }
+
+    /**
+     * Picks a slot for the dragged block when no exact slot matched under the drop
+     * point: the first empty slot of the container, or its single slot for containers
+     * like WhileLoop whose only expression slot lives at index 0. Returns -1 when the
+     * container has no usable slot.
+     */
+    private static int fallbackSlotFor(HasChildExpressions parent) {
+        if (parent instanceof ExpressionPackingStatement eps) {
+            return eps.getFirstEmptyChildSlot();
+        }
+        if (parent instanceof BlockStatement bs) {
+            return bs.getFirstEmptyChildSlot();
+        }
+        Expression[] kids = parent.getChildExpressions();
+        if (kids != null && kids.length > 0) {
+            for (int i = 0; i < kids.length; i++) {
+                if (kids[i] == null) {
+                    return i;
+                }
+            }
+            return 0; // fully-occupied single-slot containers (e.g. WhileLoop)
+        }
+        return -1;
     }
 
     /**
