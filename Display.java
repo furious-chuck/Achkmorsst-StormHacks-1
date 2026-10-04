@@ -16,6 +16,9 @@ class Display extends JFrame {
 
     Paintable[] paintQueue = {};
 
+    // set by Main so the update loop can test mouse-hover against all blocks
+    static BlockManager activeBlockManager = null;
+
 
     public Display(String name) {
 
@@ -108,6 +111,11 @@ class Display extends JFrame {
         Point mouseCoor = MouseInfo.getPointerInfo().getLocation();
         SwingUtilities.convertPointFromScreen(mouseCoor, this);
         Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
+
+        // determine whether the mouse is hovering over a block (and which one);
+        // prints hover enter/leave messages to the terminal
+        Inputs.getHoveredBlock(activeBlockManager);
+
         display();
 
         Inputs.mousePressed = Inputs.mouseHeld && ! Inputs.mousePressed;

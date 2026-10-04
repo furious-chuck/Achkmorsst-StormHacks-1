@@ -1,6 +1,6 @@
 import java.awt.*;
 
-public abstract class BlockExpression implements Expression, Paintable {
+public abstract class BlockExpression implements Expression, Paintable, Hoverable {
 
     Vector position = new RectVector();
 
@@ -13,6 +13,44 @@ public abstract class BlockExpression implements Expression, Paintable {
 
     public HasChildExpressions getParentExpression() {
         return parentExpression;
+    }
+
+    @Override
+    public Vector getPosition() {
+        return position;
+    }
+
+    @Override
+    public String getBlockName() {
+        return getClass().getSimpleName();
+    }
+
+    @Override
+    public boolean containsPoint(Vector p) {
+        return p.getX() >= position.getX() &&
+               p.getX() <= position.getX() + getCascadingWidth() &&
+               p.getY() >= position.getY() &&
+               p.getY() <= position.getY() + getCascadingHeight();
+    }
+
+    /**
+     * Finds the innermost hoverable block under the given world-space mouse position:
+     * this expression's children first (deepest block wins), then its own bounding box.
+     */
+    @Override
+    public Hoverable findHoveredBlock(Vector mousePos) {
+        for (Expression exp : getChildExpressions()) {
+            if (exp instanceof BlockExpression be) {
+                Hoverable found = be.findHoveredBlock(mousePos);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        if (containsPoint(mousePos)) {
+            return this;
+        }
+        return null;
     }
 
     public abstract double getCascadingHeight();
