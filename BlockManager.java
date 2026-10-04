@@ -15,8 +15,7 @@ public class BlockManager implements Paintable {
 
     StaticScreenPosButton[] buttons = new StaticScreenPosButton[] {
             new StaticScreenPosButton(new RectVector(225, 75), "To .java"),
-            new StaticScreenPosButton(new RectVector(325, 75), "To .class"),
-            new StaticScreenPosButton(new RectVector(425, 75), "Run!")
+            new StaticScreenPosButton(new RectVector(325, 75), "To .class")
     };
 
 
@@ -79,8 +78,6 @@ public class BlockManager implements Paintable {
                 compileOnce();
             } else if (buttons[1].isHoveredOver()) {
                 compileTwice();
-            } else if (buttons[2].isHoveredOver()) {
-                compileAndRun();
             }
         }
     }
