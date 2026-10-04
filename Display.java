@@ -187,6 +187,7 @@ class Display extends JFrame {
 
     public void display() {
         g = bs.getDrawGraphics();
+        g.setFont(Font.getFont(Font.MONOSPACED));
         // g.setColor(bgColor);
         // g.fillRect(0, 0, MagicNumbers.SCREEN_WIDTH, MagicNumbers.SCREEN_HEIGHT);
         for (Paintable paintable : paintQueue) {
