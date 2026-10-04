@@ -1,14 +1,14 @@
+import java.awt.*;
 import java.util.Objects;
 
 public class Assigner extends ExpressionPackingExpression {
 
     boolean hasOperator;
     String shortHandOperator;
-    BlockExpression lValue;
-    BlockExpression rValue;
 
 
     public Assigner(Expression lValue, Expression rValue) {
+        expressions = new BlockExpression[2];
         setChildElement(0, lValue);
         setChildElement(1, rValue);
         hasOperator = false;
@@ -31,28 +31,11 @@ public class Assigner extends ExpressionPackingExpression {
 
     @Override
     public String compile() {
-        return lValue.compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + rValue;
+        return expressions[0].compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + expressions[1];
     }
 
     @Override
-    public Expression[] getChildExpressions() {
-        return new Expression[] { lValue, rValue };
-    }
-
-    @Override
-    public void setChildElement(int childID, Expression newExpression) {
-        if (!(newExpression instanceof BlockExpression)) {
-            Util.unableToCan();
-        }
-        BlockExpression be = (BlockExpression) newExpression;
-        if (childID == 0) {
-            lValue = be;
-            lValue.parentExpression = this;
-        } else if (childID == 1) {
-            rValue = be;
-            rValue.parentExpression = this;
-        } else {
-            Util.unableToCan();
-        }
+    public void paintMainShape(Graphics g) {
+        GraphicsUtils.drawStatementShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
     }
 }

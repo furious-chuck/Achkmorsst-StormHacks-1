@@ -70,9 +70,13 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
         be.position = position.add(new RectVector(getWidthUpToExpressionAt(childID), 10));
     }
 
+    public void paintMainShape(Graphics g) {
+        GraphicsUtils.drawThatGoofyExpressionShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
+    }
+    
     @Override
     public void paint(Graphics g) {
-        GraphicsUtils.drawThatGoofyExpressionShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
+        paintMainShape(g);
         double elementOffset = leftSpace;
         for (BlockExpression expression : expressions) {
             if (expression == null) {

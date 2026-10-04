@@ -90,7 +90,7 @@ public abstract class AtomicExpression extends BlockExpression {
         static class DoubleNumber extends AtomicExpression {
 
             double value;
-            public DoubleNumber(int value) {
+            public DoubleNumber(double value) {
                 this.value = value;
                 mainColor = new Color(0, 255, 255);
                 secondaryColor = new Color(127, 255, 255);
