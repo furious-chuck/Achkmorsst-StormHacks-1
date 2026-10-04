@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 public class Inputs {
     private Inputs() {}
 
@@ -28,6 +30,15 @@ public class Inputs {
     // out of its parent and is now free-floating; set by handleDragStart(), read by
     // endDrag() so it can register the block as a new root in the BlockManager
     static boolean draggedBlockIsDetached = false;
+    // the innermost block actually under the cursor when the drag started (which may
+    // be a nested child of draggedBlock); used by endDrag() to reattach the ORIGINAL
+    // grabbed block into the slot it was displaced from when the user merely clicked
+    // (pressed and released without moving), so a simple click never makes a block
+    // vanish from the canvas
+    static Hoverable originallyGrabbedBlock = null;
+    // world-space position of the grabbed block at press time; if the block is still
+    // there at release, the "drag" was really just a click
+    static Vector originalBlockPos = null;
 
     /**
      * Determines whether the mouse is currently hovering over a block, and if so,
@@ -121,6 +132,35 @@ public class Inputs {
     }
 
     /**
+     * Returns the deepest block packed inside the given statement's own body (its
+     * child expression slots, searched recursively) that contains the point, or null.
+     * Unlike findHoveredHere(), this never claims the statement itself for a point
+     * that is not over one of its real children — so while dragging a detached atomic
+     * that visually overlaps an enclosing container, the hidden original still wins
+     * the hit-test and can be restored when the user just clicks without moving.
+     */
+    private static Hoverable findPackedChildAt(BlockStatement root, Vector p) {
+        if (!root.containsPoint(p)) {
+            return null;
+        }
+        Hoverable direct = root.findHoveredChild(p);
+        if (direct != null && direct != root) {
+            return direct;
+        }
+        // the point may fall in a gap between packed rows of a container statement:
+        // check the statements stored inside it (e.g. WhileLoop bodies) as well
+        if (root instanceof StatementContainer sc
+                && sc.getContainedStatement() instanceof BlockStatement inner
+                && inner != root) {
+            Hoverable found = findPackedChildAt(inner, p);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Finds the block under the mouse that would receive a dropped block, ignoring
      * the dragged block's own subtree. Returns null when hovering over empty space.
      */
@@ -129,18 +169,14 @@ public class Inputs {
         Hoverable deepest = null;
         double deepestArea = Double.MAX_VALUE;
 
+        // pass 1: genuine blocks packed inside containers take priority over the
+        // containers themselves — a detached copy floating on top of a parent must
+        // not shadow the original still sitting in its slot
         for (BlockStatement bs : blockManager.statements) {
             if (isWithinStatement(bs, draggedRoot)) {
                 continue; // don't let the dragged tree be its own drop target
             }
-            // findHoveredHere() (not findHoveredBlock) so a root statement's hit area
-            // stops at its own bounds instead of also claiming every statement that is
-            // connected below it — otherwise each lower block produces duplicate hits
-            // from every ancestor root and can never win the smallest-area contest.
-            Hoverable found = bs.findHoveredHere(worldMousePos);
-            if (found != null && !isWithinStatement(bs, found)) {
-                found = null;
-            }
+            Hoverable found = findPackedChildAt(bs, worldMousePos);
             if (found != null) {
                 double area = found.getCascadingWidth() * found.getCascadingHeight();
                 if (area < deepestArea) {
@@ -155,6 +191,34 @@ public class Inputs {
             }
             Hoverable found = be.findHoveredBlock(worldMousePos);
             if (found != null && !isWithinSubtree(be, found)) {
+                found = null;
+            }
+            if (found != null) {
+                double area = found.getCascadingWidth() * found.getCascadingHeight();
+                if (area < deepestArea) {
+                    deepest = found;
+                    deepestArea = area;
+                }
+            }
+        }
+        if (deepest != null) {
+            return deepest;
+        }
+
+        // pass 2: no packed child was under the cursor; fall back to the container
+        // shapes themselves (their outer shape / empty placeholder slots), which is
+        // where a dragged atomic can actually be reattached
+        deepestArea = Double.MAX_VALUE;
+        for (BlockStatement bs : blockManager.statements) {
+            if (isWithinStatement(bs, draggedRoot)) {
+                continue; // don't let the dragged tree be its own drop target
+            }
+            // findHoveredHere() (not findHoveredBlock) so a root statement's hit area
+            // stops at its own bounds instead of also claiming every statement that is
+            // connected below it — otherwise each lower block produces duplicate hits
+            // from every ancestor root and can never win the smallest-area contest.
+            Hoverable found = bs.findHoveredHere(worldMousePos);
+            if (found != null && !isWithinStatement(bs, found)) {
                 found = null;
             }
             if (found != null) {
@@ -180,6 +244,8 @@ public class Inputs {
         if (grabbed != null) {
             currentlyDraggingABlock = true;
             draggedBlockIsDetached = false;
+            originallyGrabbedBlock = grabbed;
+            originalBlockPos = grabbed.getPosition().clone();
 
             if (grabbed instanceof BlockExpression be && be.getParentBlock() != null) {
                 // Atomic statements (numbers, strings, class blocks) and any other
@@ -269,6 +335,19 @@ public class Inputs {
      * Otherwise the block stays wherever it was dropped. Clears drag state either way.
      */
     private static void endDrag(BlockManager blockManager) {
+        // A press-and-release without any movement is a *click*, not a drag. The grab
+        // at press time already tore the atomic out of its parent (leaving an empty
+        // slot), so unless we put it right back, clicking a block would make it
+        // vanish from the canvas. Detect "the dragged block never moved" and restore
+        // the original grabbed block to the exact slot it came from.
+        if (draggedBlock != null && originalBlockPos != null
+                && Math.abs(draggedBlock.getPosition().getX() - originalBlockPos.getX()) < 0.5
+                && Math.abs(draggedBlock.getPosition().getY() - originalBlockPos.getY()) < 0.5) {
+            restoreClickedBlock(blockManager);
+            clearDragState();
+            return;
+        }
+
         System.out.println("dropped block: " + draggedBlock.getBlockName()
                 + " at (" + (int) draggedBlock.getPosition().getX()
                 + ", " + (int) draggedBlock.getPosition().getY() + ")"
@@ -329,8 +408,214 @@ public class Inputs {
         dragStartMousePos = null;
         dragStartBlockPos = null;
         lastDropTarget = null;
+        currentlyDraggingABlock = false;
+        clearDragState();
+    }
+
+    /**
+     * Resets all per-drag bookkeeping fields. Called at the end of every drop (and
+     * every restored click) so the next press starts from a clean slate.
+     */
+    private static void clearDragState() {
+        draggedBlock = null;
+        dragStartMousePos = null;
+        dragStartBlockPos = null;
+        lastDropTarget = null;
         draggedBlockIsDetached = false;
         currentlyDraggingABlock = false;
+        originallyGrabbedBlock = null;
+        originalBlockPos = null;
+    }
+
+    /**
+     * Puts a merely-clicked block back exactly where it was grabbed from, undoing the
+     * detach performed at press time. The block never moved during the "drag", so we
+     * walk the tree to find the container whose slot still sits at the block's
+     * original position and re-pack it there (restoring the parent back-link and
+     * removing it from the free-floating roots again). If no such hole can be found
+     * the block simply remains a visible free-floating root — either way it can never
+     * silently disappear from the canvas.
+     */
+    private static void restoreClickedBlock(BlockManager blockManager) {
+        if (blockManager == null || originallyGrabbedBlock == null) {
+            return;
+        }
+        if (!(originallyGrabbedBlock instanceof BlockExpression origBe)) {
+            return; // statements are never detached on grab, nothing to restore
+        }
+        if (origBe.getParentExpression() != null) {
+            return; // somehow already re-packed; leave it alone
+        }
+        HasChildExpressions host = findSlotAtPosition(blockManager.statements,
+                origBe, originalBlockPos);
+        if (host == null) {
+            host = findSlotInExpressions(blockManager.expressions, origBe, originalBlockPos);
+        }
+        if (host != null) {
+            int slot = slotIndexAtPosition(host, origBe, originalBlockPos);
+            if (slot >= 0 && host.getChildExpressions()[slot] == null) {
+                origBe.attachToParent(host, slot);
+                if (blockManager.expressions.contains(origBe)) {
+                    blockManager.expressions.remove(origBe);
+                }
+                System.out.println("click without movement: restored " + origBe.getBlockName()
+                        + " back into " + host.getClass().getSimpleName() + " slot " + slot);
+            }
+        }
+        // keep the dragged copy consistent with the (possibly re-attached) original
+        if (origBe.getParentExpression() != null && draggedBlock == origBe) {
+            draggedBlockIsDetached = false;
+        }
+    }
+
+    private static HasChildExpressions findSlotAtPosition(ArrayList<BlockStatement> roots,
+                                                           BlockExpression target, Vector p) {
+        for (BlockStatement bs : roots) {
+            HasChildExpressions found = findSlotAtPosition(bs, target, p);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Recursively searches the statement rooted at bs (its packed expression slots,
+     * its nested containers' bodies, and its following-statement chain) for a
+     * container that has an empty slot whose paint-time layout position equals the
+     * given world point. Returns that container, or null.
+     */
+    private static HasChildExpressions findSlotAtPosition(BlockStatement bs,
+                                                           BlockExpression target, Vector p) {
+        if (bs == null) {
+            return null;
+        }
+        if (bs instanceof ExpressionPackingStatement eps) {
+            double elementOffset = eps.leftSpace;
+            for (int i = 0; i < eps.expressions.length; i++) {
+                BlockExpression expression = eps.expressions[i];
+                if (expression == null) {
+                    Vector slotPos = bs.position.add(new RectVector(elementOffset, 10));
+                    if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                            && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                        return eps;
+                    }
+                    elementOffset += eps.defaultSize.getX() + eps.expressionSpacing;
+                } else {
+                    elementOffset += expression.getCascadingWidth() + eps.expressionSpacing;
+                }
+            }
+        }
+        if (bs instanceof WhileLoop wl && wl.condition == null) {
+            Vector slotPos = wl.position.add(new RectVector(10, 10));
+            if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                    && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                return wl;
+            }
+        }
+        // search packed child expressions (e.g. a BinaryOperation inside a slot)
+        for (Expression exp : bs.getChildExpressions()) {
+            if (exp instanceof BlockExpression be) {
+                HasChildExpressions found = findSlotInSubtree(be, target, p);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        // search statements stored inside this one (container bodies)
+        if (bs instanceof StatementContainer sc
+                && sc.getContainedStatement() instanceof BlockStatement inner
+                && inner != bs) {
+            HasChildExpressions found = findSlotAtPosition(inner, target, p);
+            if (found != null) {
+                return found;
+            }
+        }
+        if (bs.followingStatement instanceof BlockStatement next) {
+            return findSlotAtPosition(next, target, p);
+        }
+        return null;
+    }
+
+    /**
+     * Expression-tree counterpart of findSlotAtPosition(): walks a packed expression
+     * subtree looking for the empty slot that matches the target's original position.
+     */
+    private static HasChildExpressions findSlotInSubtree(BlockExpression be,
+                                                          BlockExpression target, Vector p) {
+        if (be instanceof ExpressionPackingExpression epe) {
+            double elementOffset = epe.leftSpace;
+            for (int i = 0; i < epe.expressions.length; i++) {
+                BlockExpression expression = epe.expressions[i];
+                if (expression == null) {
+                    Vector slotPos = be.position.add(new RectVector(elementOffset, 10));
+                    if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                            && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                        return epe;
+                    }
+                    elementOffset += epe.defaultSize.getX() + epe.expressionSpacing;
+                } else {
+                    elementOffset += expression.getCascadingWidth() + epe.expressionSpacing;
+                }
+            }
+        }
+        for (Expression exp : be.getChildExpressions()) {
+            if (exp instanceof BlockExpression child) {
+                HasChildExpressions found = findSlotInSubtree(child, target, p);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static HasChildExpressions findSlotInExpressions(ArrayList<BlockExpression> roots,
+                                                              BlockExpression target, Vector p) {
+        for (BlockExpression be : roots) {
+            if (be == target) {
+                continue;
+            }
+            HasChildExpressions found = findSlotInSubtree(be, target, p);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the index of the slot in the given container whose layout position
+     * equals p, or -1 if none matches.
+     */
+    private static int slotIndexAtPosition(HasChildExpressions parent, BlockExpression target,
+                                           Vector p) {
+        if (parent instanceof ExpressionPackingStatement eps) {
+            for (int i = 0; i < eps.expressions.length; i++) {
+                Vector slotPos = eps.position
+                        .add(new RectVector(eps.getWidthUpToExpressionAt(i), 10));
+                if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                        && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                    return i;
+                }
+            }
+        } else if (parent instanceof ExpressionPackingExpression epe) {
+            for (int i = 0; i < epe.expressions.length; i++) {
+                Vector slotPos = epe.position
+                        .add(new RectVector(epe.getWidthUpToExpressionAt(i), 10));
+                if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                        && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                    return i;
+                }
+            }
+        } else if (parent instanceof WhileLoop wl) {
+            Vector slotPos = wl.position.add(new RectVector(10, 10));
+            if (Math.abs(slotPos.getX() - p.getX()) < 0.5
+                    && Math.abs(slotPos.getY() - p.getY()) < 0.5) {
+                return 0;
+            }
+        }
+        return -1;
     }
 
     /**

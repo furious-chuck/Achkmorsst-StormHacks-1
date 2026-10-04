@@ -216,7 +216,7 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
      * from being mistaken for a genuine child of this container — such a block is not
      * packed here anymore, so hitting it must never hide the container underneath it.
      */
-    private Hoverable findHoveredChild(Vector mousePos) {
+    public Hoverable findHoveredChild(Vector mousePos) {
         if (this instanceof ExpressionPackingStatement eps) {
             double elementOffset = eps.leftSpace;
             for (int i = 0; i < eps.expressions.length; i++) {
