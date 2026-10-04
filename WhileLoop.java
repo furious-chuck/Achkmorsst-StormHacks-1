@@ -67,6 +67,6 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     @Override
     public void paint(Graphics g) {
-
+        GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), getHeaderCascadingHeight(), getTotalStatementStackHeight(), 10);
     }
 }

@@ -55,7 +55,8 @@ public class GraphicsUtils {
         g.setColor(outlineColor);
         g.drawPolygon(poly);
     }
-    /*
+
+
     public static void drawStatementShapeWithGap(Graphics g, Color mainColor, Color outlineColor, Vector positionOnScreen, double width, double headerHeight, double gapSize, double footerHeight) {
         Polygon poly = Util.createPolygon(
                 new Vector[] {
@@ -64,18 +65,18 @@ public class GraphicsUtils {
                         (new RectVector(10, 5)).add(positionOnScreen),
                         (new RectVector(20, 5)).add(positionOnScreen),
                         (new RectVector(20, 0)).add(positionOnScreen),
-                        (new RectVector(size.getX() - 2, 0)).add(positionOnScreen),
-                        (new RectVector(size.getX(), 2)).add(positionOnScreen),
-                        (new RectVector(size.getX(), size.getY() - 2)).add(positionOnScreen),
-                        (new RectVector(size.getX() - 2, size.getY())).add(positionOnScreen),
+                        (new RectVector(width - 2, 0)).add(positionOnScreen),
+                        (new RectVector(width, 2)).add(positionOnScreen),
+                        (new RectVector(width, headerHeight + gapSize + footerHeight - 2)).add(positionOnScreen),
+                        (new RectVector(width - 2, headerHeight + gapSize + footerHeight)).add(positionOnScreen),
 
-                        (new RectVector(20, size.getY())).add(positionOnScreen),
-                        (new RectVector(20, size.getY() + 5)).add(positionOnScreen),
-                        (new RectVector(10, size.getY() + 5)).add(positionOnScreen),
-                        (new RectVector(10, size.getY())).add(positionOnScreen),
+                        (new RectVector(20, headerHeight + gapSize + footerHeight)).add(positionOnScreen),
+                        (new RectVector(20, headerHeight + gapSize + footerHeight + 5)).add(positionOnScreen),
+                        (new RectVector(10, headerHeight + gapSize + footerHeight + 5)).add(positionOnScreen),
+                        (new RectVector(10, headerHeight + gapSize + footerHeight)).add(positionOnScreen),
 
-                        (new RectVector(2, size.getY())).add(positionOnScreen),
-                        (new RectVector(0, size.getY() - 2)).add(positionOnScreen),
+                        (new RectVector(2, headerHeight + gapSize + footerHeight)).add(positionOnScreen),
+                        (new RectVector(0, headerHeight + gapSize + footerHeight - 2)).add(positionOnScreen),
                         (new RectVector(0, 2)).add(positionOnScreen)
                 }
         );
@@ -85,6 +86,5 @@ public class GraphicsUtils {
         g.setColor(outlineColor);
         g.drawPolygon(poly);
     }
-    */
 
 }
