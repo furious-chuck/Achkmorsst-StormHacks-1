@@ -12,6 +12,27 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
 
     final Vector defaultSize = new RectVector(50, 30);
 
+    // Layout accessors (kept in sync with ExpressionPackingExpression's): every
+    // paint()/hit-test loop that walks these slots — including the duplicated ones in
+    // Inputs and BlockStatement — must read them through these methods so any subclass
+    // that changes its layout still paints and hit-tests consistently.
+
+    double leftSpaceForLayout() {
+        return leftSpace;
+    }
+
+    double slotSpacingForLayout() {
+        return expressionSpacing;
+    }
+
+    /**
+     * World-space position of the top-left corner of the bounding box of slot {@code i}
+     * — exactly where paint() draws it (and where setChildElement packs the child).
+     */
+    public Vector getSlotPositionAt(int index) {
+        return position.add(new RectVector(getWidthUpToExpressionAt(index), verSpace));
+    }
+
     @Override
     public double getCascadingHeight() {
         if (expressions.length == 0) {
@@ -59,13 +80,13 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
      */
     public int getSlotIndexForWorldX(double worldX) {
         double localX = worldX - position.getX();
-        double offset = leftSpace;
+        double offset = leftSpaceForLayout();
         for (int i = 0; i < expressions.length; i++) {
             double w = expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
             if (localX >= offset && localX <= offset + w) {
                 return i;
             }
-            offset += w + expressionSpacing;
+            offset += w + slotSpacingForLayout();
         }
         return -1;
     }
@@ -124,11 +145,11 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
     @Override
     public void paint(Graphics g) {
         paintMainShape(g);
-        double elementOffset = leftSpace;
+        double elementOffset = leftSpaceForLayout();
         for (BlockExpression expression : expressions) {
             if (expression == null) {
                 GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(elementOffset, 10)).subtract(Global.cameraPos), defaultSize);
-                elementOffset += defaultSize.getX() + expressionSpacing;
+                elementOffset += defaultSize.getX() + slotSpacingForLayout();
             } else {
                 // paint the child at its slot computed from the parent's current position
                 // (same convention as the null placeholder above), so a moved parent
@@ -137,7 +158,7 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
                 expression.position = position.add(new RectVector(elementOffset, 10));
                 expression.paint(g);
                 expression.position = previousPosition;
-                elementOffset += expression.getCascadingWidth() + expressionSpacing;
+                elementOffset += expression.getCascadingWidth() + slotSpacingForLayout();
             }
         }
 

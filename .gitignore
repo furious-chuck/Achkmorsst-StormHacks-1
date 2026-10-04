@@ -1,1 +1,2 @@
-out
+# Java compiled files
+*.class

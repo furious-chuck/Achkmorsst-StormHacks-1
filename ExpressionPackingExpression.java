@@ -12,6 +12,45 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
 
     final Vector defaultSize = new RectVector(50, 30);
 
+    /**
+     * Half of the horizontal space taken up by each gap between two packed slots.
+     * Subclasses that draw something inside those gaps (e.g. BinaryOperation paints
+     * its operator symbol there) widen the gaps by setting this to a larger value so
+     * the drawing never overlaps the neighbouring blocks. The extra width is applied
+     * symmetrically around the centre of every gap, which keeps the existing slot
+     * positions (leftSpace + i*(default+expressionSpacing) style layouts) valid for
+     * hit-testing and child placement.
+     */
+    double halfGapExpansion = 0;
+
+    /**
+     * Total horizontal expansion added to every gap between two packed slots.
+     */
+    double gapExpansion() {
+        return halfGapExpansion * 2;
+    }
+
+    // Layout accessors: the paint()/hit-test loops (including the duplicated ones in
+    // Inputs) must always read these instead of the raw fields, so subclasses that
+    // override any of them (e.g. BinaryOperation widening its gaps for the operator
+    // symbol) keep visual layout and hit-testing perfectly in sync.
+
+    double leftSpaceForLayout() {
+        return leftSpace;
+    }
+
+    double slotSpacingForLayout() {
+        return expressionSpacing + gapExpansion();
+    }
+
+    /**
+     * World-space position of the top-left corner of the bounding box of slot {@code i}
+     * — exactly where paint() draws it (and where setChildElement packs the child).
+     */
+    public Vector getSlotPositionAt(int index) {
+        return position.add(new RectVector(getWidthUpToExpressionAt(index), verSpace));
+    }
+
     @Override
     public double getCascadingHeight() {
         if (expressions.length == 0) {
@@ -36,7 +75,7 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
         for (BlockExpression exp : expressions) {
             total += exp == null ? defaultSize.getX() : exp.getCascadingWidth();
         }
-        total += expressionSpacing * (expressions.length - 1);
+        total += (expressionSpacing + gapExpansion()) * (expressions.length - 1);
         return total;
     }
 
@@ -48,7 +87,10 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
         for (int i = 0; i < index; i++) {
             total += expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
         }
-        total += expressionSpacing * index;
+        // the gap expansion is centred on each gap, so every slot after the first one
+        // is shifted right by exactly one half-expansion (and the last slot sits before
+        // a trailing half-expansion, which getCascadingWidth adds back on the right)
+        total += (expressionSpacing + gapExpansion()) * index - halfGapExpansion;
         return total;
     }
 
@@ -59,13 +101,16 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
      */
     public int getSlotIndexForWorldX(double worldX) {
         double localX = worldX - position.getX();
-        double offset = leftSpace;
+        // the first slot starts at leftSpace; each following slot is shifted by one
+        // half-expansion (the gap expansion is centred on the gaps), so normalise the
+        // coordinate back into the un-expanded layout before measuring the slots
+        double offset = leftSpaceForLayout() - halfGapExpansion;
         for (int i = 0; i < expressions.length; i++) {
             double w = expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
             if (localX >= offset && localX <= offset + w) {
                 return i;
             }
-            offset += w + expressionSpacing;
+            offset += w + slotSpacingForLayout();
         }
         return -1;
     }
@@ -125,15 +170,25 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
     public void paintMainShape(Graphics g) {
         GraphicsUtils.drawThatGoofyExpressionShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
     }
-    
+
+    /**
+     * Hook for subclasses that want to draw something on top of the container's shape
+     * (e.g. BinaryOperation paints its operator symbol in the gap between the two
+     * packed slots). Called from paint() after the main shape is drawn but before the
+     * child blocks/placeholder slots are painted, so children always sit on top.
+     */
+    protected void paintOverMainShape(Graphics g) {
+    }
+
     @Override
     public void paint(Graphics g) {
         paintMainShape(g);
-        double elementOffset = leftSpace;
+        paintOverMainShape(g);
+        double elementOffset = leftSpaceForLayout() - halfGapExpansion;
         for (BlockExpression expression : expressions) {
             if (expression == null) {
                 GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(elementOffset, 10)).subtract(Global.cameraPos), defaultSize);
-                elementOffset += defaultSize.getX() + expressionSpacing;
+                elementOffset += defaultSize.getX() + slotSpacingForLayout();
             } else {
                 // paint the child at its slot computed from the parent's current position
                 // (same convention as the null placeholder above), so a moved parent
@@ -142,7 +197,7 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
                 expression.position = position.add(new RectVector(elementOffset, 10));
                 expression.paint(g);
                 expression.position = previousPosition;
-                elementOffset += expression.getCascadingWidth() + expressionSpacing;
+                elementOffset += expression.getCascadingWidth() + slotSpacingForLayout();
             }
         }
     }
