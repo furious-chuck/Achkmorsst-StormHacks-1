@@ -155,4 +155,34 @@ public abstract class AtomicExpression extends BlockExpression {
         }
     }
 
+    public static class ClassBlock extends AtomicExpression {
+        String stringContents;
+        public ClassBlock(String stringContents) {
+            this.stringContents = stringContents;
+            mainColor = new Color(127, 127, 127);
+            secondaryColor = new Color(191, 191, 191);
+            outlineColor = Color.BLACK;
+            textColor = Color.BLACK;
+        }
+        @Override
+        public String compile() {
+            return stringContents;
+        }
+
+        @Override
+        public double getValueWidth() {
+            return String.valueOf(stringContents).length() * Consts.LETTER_WIDTH;
+        }
+
+        @Override
+        public String getValueString() {
+            return stringContents;
+        }
+
+        @Override
+        public void setChildElement(int childID, Expression newExpression) {
+            Util.unableToCan();
+        }
+    }
+
 }

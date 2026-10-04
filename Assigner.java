@@ -33,9 +33,4 @@ public class Assigner extends ExpressionPackingStatement {
     public String compile() {
         return expressions[0].compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + expressions[1];
     }
-
-    @Override
-    public void paintMainShape(Graphics g) {
-        GraphicsUtils.drawStatementShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
-    }
 }

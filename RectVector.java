@@ -1,3 +1,5 @@
+import java.awt.*;
+
 public class RectVector implements Vector {
 
     private double x;
@@ -10,6 +12,10 @@ public class RectVector implements Vector {
 
     public RectVector() {
         this(0, 0);
+    }
+
+    public static Vector castFromPoint(Point mouseCoor) {
+        return new RectVector(mouseCoor.x, mouseCoor.y);
     }
 
     @Override

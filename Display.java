@@ -12,7 +12,7 @@ class Display extends JFrame {
     BufferStrategy bs;  // This variable's name describes this entire class very accurately.
     Graphics g;
 
-    // Color bgColor = new Color(0, 0, 0);
+    Color bgColor = Color.WHITE;
 
     Paintable[] paintQueue = {};
 
@@ -38,7 +38,6 @@ class Display extends JFrame {
 
         setVisible(true);
 
-        addKeyListener(new KeyHandler());
         addMouseListener(new MouseHandler());
 
         createBufferStrategy(2);
@@ -46,85 +45,7 @@ class Display extends JFrame {
 
     }
 
-    private class KeyHandler implements KeyListener {
-        // This is a surprise tool that will help us later
-        @Override
-        public void keyPressed(KeyEvent e) {
-            /*
-            String symbolTyped = KeyEvent.getKeyText(e.getKeyCode());
-            if (null != symbolTyped) switch (symbolTyped) {
-                case "W":
-                    Inputs.wHeld = true;
-                    break;
-                case "A":
-                    Inputs.aHeld = true;
-                    break;
-                case "S":
-                    Inputs.sHeld = true;
-                    break;
-                case "D":
-                    Inputs.dHeld = true;
-                    break;
-                case "E":
-                    Inputs.eHeld = true;
-                    break;
-                case "I":
-                    Inputs.iHeld = true;
-                    break;
-                case "Shift":
-                    Inputs.shiftHeld = true;
-                    break;
-                case "Escape":
-                    Inputs.escHeld = true;
-                    break;
-                default:
-                    break;
-            }
-            */
-        }
-
-        @Override
-        public void keyReleased(KeyEvent e) {
-            /*
-            String symbolTyped = KeyEvent.getKeyText(e.getKeyCode());
-            if (null != symbolTyped) switch (symbolTyped) {
-                case "W":
-                    Inputs.wHeld = false;
-                    break;
-                case "A":
-                    Inputs.aHeld = false;
-                    break;
-                case "S":
-                    Inputs.sHeld = false;
-                    break;
-                case "D":
-                    Inputs.dHeld = false;
-                    break;
-                case "E":
-                    Inputs.eHeld = false;
-                    break;
-                case "I":
-                    Inputs.iHeld = false;
-                    break;
-                case "Shift":
-                    Inputs.shiftHeld = false;
-                    break;
-                case "Escape":
-                    Inputs.escHeld = false;
-                    break;
-                default:
-                    break;
-            }
-            */
-        }
-
-        @Override
-        public void keyTyped(KeyEvent e) {
-            // intentionally blank
-        }
-    }
-
-    private class MouseHandler implements MouseInputListener {
+    private static class MouseHandler implements MouseInputListener {
 
         @Override
         public void mouseClicked(MouseEvent e) {
@@ -134,31 +55,16 @@ class Display extends JFrame {
         @Override
         public void mousePressed(MouseEvent e) {
             int button = e.getButton();
-            switch (button) {
-                case MouseEvent.BUTTON1:
-                    // Inputs.lmbHeld = true;
-                    // todo: add logic for mouse held.
-                    break;
-                case MouseEvent.BUTTON2:
-                    // Inputs.rmbHeld = true;
-                    break;
-                default:
-                    break;
+            if (button == MouseEvent.BUTTON1) {
+                Inputs.mouseHeld = true;
             }
         }
 
         @Override
         public void mouseReleased(MouseEvent e) {
             int button = e.getButton();
-            switch (button) {
-                case MouseEvent.BUTTON1:
-                    // Inputs.lmbHeld = false;
-                    break;
-                case MouseEvent.BUTTON2:
-                    // Inputs.rmbHeld = false;
-                    break;
-                default:
-                    break;
+            if (button == MouseEvent.BUTTON1) {
+                Inputs.mouseHeld = false;
             }
         }
 
@@ -188,8 +94,8 @@ class Display extends JFrame {
     public void display() {
         g = bs.getDrawGraphics();
         g.setFont(Font.getFont(Font.MONOSPACED));
-        // g.setColor(bgColor);
-        // g.fillRect(0, 0, MagicNumbers.SCREEN_WIDTH, MagicNumbers.SCREEN_HEIGHT);
+        g.setColor(bgColor);
+        g.fillRect(0, 0, Consts.WINDOW_WIDTH, Consts.WINDOW_HEIGHT);
         for (Paintable paintable : paintQueue) {
             paintable.paint(g);
         }
@@ -201,10 +107,11 @@ class Display extends JFrame {
     public void update() {
         Point mouseCoor = MouseInfo.getPointerInfo().getLocation();
         SwingUtilities.convertPointFromScreen(mouseCoor, this);
-        // Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
-        // todo: store mouse pos.
-        // System.out.println("Cursor in window: " + mousePos.getX() + ", " + mousePos.getY());
+        Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
         display();
+
+        Inputs.mousePressed = Inputs.mouseHeld && ! Inputs.mousePressed;
+        Inputs.mouseHeldLastFrame = Inputs.mouseHeld;
     }
 
 }
