@@ -49,7 +49,6 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
             total += expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
         }
         total += expressionSpacing * index;
-        System.out.println(total);
         return total;
     }
 
@@ -79,7 +78,13 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
                 GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(elementOffset, 10)).subtract(Global.cameraPos), defaultSize);
                 elementOffset += defaultSize.getX() + expressionSpacing;
             } else {
+                // paint the child at its slot computed from the parent's current position
+                // (same convention as the null placeholder above), so a moved parent
+                // can never leave a child behind or misalign it with null siblings.
+                Vector previousPosition = expression.position;
+                expression.position = position.add(new RectVector(elementOffset, 10));
                 expression.paint(g);
+                expression.position = previousPosition;
                 elementOffset += expression.getCascadingWidth() + expressionSpacing;
             }
         }
