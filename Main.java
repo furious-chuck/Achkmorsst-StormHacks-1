@@ -33,6 +33,8 @@ public class Main {
         );
          */
         BlockStatement bs = new VarDeclaration(new AtomicExpression.ClassBlock("int"), new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10));
+        BlockStatement print = new PrintCall(new AtomicExpression.StringExpression("Hello, world!"));
+        bs.connectNextStatement(print);
         BlockManager bm = new BlockManager(
                 new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { bs })),
                 new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {}))

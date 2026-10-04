@@ -8,8 +8,7 @@ public class PrintCall extends ExpressionPackingStatement {
 
     @Override
     public String compile() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'compile'");
+        return "System.out.println(" + expressions[0].compile() + ");\n";
     }
     
 }
