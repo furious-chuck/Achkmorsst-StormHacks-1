@@ -12,4 +12,7 @@ public class Consts {
     static final int LETTER_WIDTH = 7;
     static final int LETTER_HEIGHT = 10;
 
+    static final int SIDEBAR_LEFT_OFFSET = 3;
+    static final int SIDEBAR_BUTTON_GAP = 3;
+
 }
