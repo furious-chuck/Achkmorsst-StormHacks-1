@@ -50,18 +50,22 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
      */
     @Override
     public Hoverable findHoveredBlock(Vector mousePos) {
+        // only blocks actually packed inside us may claim this point: a free-floating
+        // (detached/dragged) expression that happens to sit on top of us is NOT one of
+        // our children, so it must not shadow us as a hover/drop target.
+        if (!containsPoint(mousePos)) {
+            return null;
+        }
+        // search our own nested children first so the deepest block wins
         for (Expression exp : getChildExpressions()) {
-            if (exp instanceof BlockExpression be) {
+            if (exp instanceof BlockExpression be && be.containsPoint(mousePos)) {
                 Hoverable found = be.findHoveredBlock(mousePos);
                 if (found != null) {
                     return found;
                 }
             }
         }
-        if (containsPoint(mousePos)) {
-            return this;
-        }
-        return null;
+        return this;
     }
 
     // public abstract double getCascadingHeight();

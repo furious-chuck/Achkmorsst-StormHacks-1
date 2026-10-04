@@ -133,7 +133,11 @@ public class Inputs {
             if (isWithinStatement(bs, draggedRoot)) {
                 continue; // don't let the dragged tree be its own drop target
             }
-            Hoverable found = bs.findHoveredBlock(worldMousePos);
+            // findHoveredHere() (not findHoveredBlock) so a root statement's hit area
+            // stops at its own bounds instead of also claiming every statement that is
+            // connected below it — otherwise each lower block produces duplicate hits
+            // from every ancestor root and can never win the smallest-area contest.
+            Hoverable found = bs.findHoveredHere(worldMousePos);
             if (found != null && !isWithinStatement(bs, found)) {
                 found = null;
             }
@@ -183,15 +187,19 @@ public class Inputs {
                 // first (leaving an empty slot/placeholder behind), promote it to a
                 // free-floating root, then drag just that block instead of the whole
                 // enclosing statement tree.
-                Vector grabPos = be.getPosition().clone();
                 be.detachFromParent();
                 if (Display.activeBlockManager != null
                         && !Display.activeBlockManager.expressions.contains(be)) {
                     Display.activeBlockManager.expressions.add(be);
                 }
-                // detachFromParent may have re-snapped the slot position; restore the
-                // spot the block was visually at when we grabbed it
-                be.moveSelfAndAllChildrenTo(grabPos);
+                // NOTE: we deliberately do NOT re-snap the block to grabPos here. The
+                // drag anchors below (dragStartMousePos/dragStartBlockPos) are recorded
+                // AFTER this call from the block's CURRENT position, so the block stays
+                // glued to the cursor from the very first frame. Forcing it back to its
+                // old slot position instead would desynchronise the anchor pair and make
+                // the block jump away from the cursor — hover/drop-target detection then
+                // follows the stale cursor point instead of the block, which is what made
+                // dropping INTO other blocks fail.
                 draggedBlock = be;
                 draggedBlockIsDetached = true;
                 System.out.println("detached atomic block from its parent: " + be.getBlockName());
@@ -277,9 +285,18 @@ public class Inputs {
             if (newParent != null) {
                 int slot = slotIndexFor(newParent, be, grabPoint);
                 if (slot >= 0) {
+                    // remember who (if anyone) occupies that slot: attachToParent will
+                    // displace them and clear their parent link, so they must become a
+                    // free-floating root of their own instead of silently vanishing
+                    Expression incumbent = newParent.getChildExpressions()[slot];
                     be.attachToParent(newParent, slot);
                     if (blockManager.expressions.contains(be)) {
                         blockManager.expressions.remove(be); // no longer a free root
+                    }
+                    if (incumbent instanceof BlockExpression incumbentBe
+                            && incumbentBe.getParentExpression() == null
+                            && !blockManager.expressions.contains(incumbentBe)) {
+                        blockManager.expressions.add(incumbentBe);
                     }
                     System.out.println("reattached atomic block into "
                             + newParent.getClass().getSimpleName() + " slot " + slot);
@@ -310,7 +327,21 @@ public class Inputs {
             if (isWithinStatement(bs, dragged)) {
                 continue; // can't drop into ourselves
             }
-            HasChildExpressions hce = reattachSlotInContainer(bs, dragged, worldMousePos);
+            // search only this statement's own slots/shape (see findDropTarget): walking
+            // the following-statement chain here too would make every ancestor root of a
+            // connected stack claim the same lower block, so drops into any block but the
+            // first in the chain could never resolve to a unique slot.
+            Hoverable hit = bs.findHoveredHere(worldMousePos);
+            if (hit == null || !isWithinStatement(bs, hit)) {
+                continue;
+            }
+            HasChildExpressions hce = reattachSlotInContainer((Object) hit, dragged, worldMousePos);
+            if (hce == null && hit != bs) {
+                // cursor is over an occupied child block, but the enclosing statement
+                // may still accept it (e.g. replacing a same-typed sibling in another
+                // slot of the same row); fall back to the root statement itself.
+                hce = reattachSlotInContainer(bs, dragged, worldMousePos);
+            }
             if (hce != null) {
                 double area = bs.getCascadingWidth() * bs.getCascadingHeight();
                 if (area < bestArea) {
@@ -355,8 +386,11 @@ public class Inputs {
                 return epe;
             }
         } else if (block instanceof WhileLoop wl) {
-            if (wl.condition == null && slotAcceptsType(dragged, null)
-                    && wl.containsPoint(worldMousePos)) {
+            // only offer the condition slot when the cursor is actually over the header
+            // row (or the empty condition placeholder itself), never over the body gap
+            boolean overConditionRow = wl.conditionContainsPoint(worldMousePos)
+                    || (!wl.hasCondition() && wl.headerContainsPoint(worldMousePos));
+            if (!wl.hasCondition() && overConditionRow && slotAcceptsType(dragged, null)) {
                 return wl;
             }
         }
