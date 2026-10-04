@@ -3,6 +3,12 @@ import java.util.ArrayList;
 public class Inputs {
     private Inputs() {}
 
+    static boolean
+        wHeld,
+        aHeld,
+        sHeld,
+        dHeld;
+
     static Vector mousePos = new RectVector(0, 0);
     static boolean mouseHeld = false;
     static boolean currentlyDraggingABlock = false;

@@ -5,6 +5,7 @@ public class Main {
 
     public static void main(String[] args) {
 
+        /*
         BlockStatement be = new VarDeclaration(new AtomicExpression.ClassBlock("potatopotato"), new AtomicExpression.Numbers.IntNumber(10), new AtomicExpression.Numbers.DoubleNumber(10.1));
         BlockStatement ba = new Assigner(new AtomicExpression.StringExpression(""), new AtomicExpression.Numbers.DoubleNumber(1021));
         BlockStatement bo = new Assigner(new AtomicExpression.StringExpression(""), new AtomicExpression.Numbers.DoubleNumber(1022));
@@ -12,9 +13,15 @@ public class Main {
         be.connectNextStatement(ba);
 
         BlockStatement we = new WhileLoop(new AtomicExpression.Numbers.DoubleNumber(100.0), be, bo);
+         */
 
+        BlockStatement as = new VarDeclaration(
+                new AtomicExpression.ClassBlock("int"),
+                new AtomicExpression.VarBlock("x"),
+                new AtomicExpression.Numbers.IntNumber(10)
+        );
         BlockManager bm = new BlockManager(
-                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { we })),
+                new ArrayList<BlockStatement>(Arrays.asList(new BlockStatement[] { as })),
                 new ArrayList<BlockExpression>(Arrays.asList(new BlockExpression[] {}))
         );
 
@@ -25,7 +32,7 @@ public class Main {
         Display.activeBlockManager = bm;
 
         for (int i = 0; i < 1080; i++) {
-            Global.display.paintQueue = new Paintable[] { be };
+            Global.display.paintQueue = new Paintable[] { bm };
             Global.display.update();
             c.tick();
             // bm.statements.get(0).moveSelfAndAllChildrenBy(new RectVector(1, 0));

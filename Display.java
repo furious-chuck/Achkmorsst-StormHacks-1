@@ -41,6 +41,7 @@ class Display extends JFrame {
 
         setVisible(true);
 
+        addKeyListener(new KeyHandler());
         addMouseListener(new MouseHandler());
 
         createBufferStrategy(2);
@@ -48,7 +49,57 @@ class Display extends JFrame {
 
     }
 
-    private static class MouseHandler implements MouseInputListener {
+    private class KeyHandler implements KeyListener {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            String symbolTyped = KeyEvent.getKeyText(e.getKeyCode());
+            switch (symbolTyped) {
+                case "W":
+                    Inputs.wHeld = true;
+                    break;
+                case "A":
+                    Inputs.aHeld = true;
+                    break;
+                case "S":
+                    Inputs.sHeld = true;
+                    break;
+                case "D":
+                    Inputs.dHeld = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) {
+            String symbolTyped = KeyEvent.getKeyText(e.getKeyCode());
+            switch (symbolTyped) {
+                case "W":
+                    Inputs.wHeld = false;
+                    break;
+                case "A":
+                    Inputs.aHeld = false;
+                    break;
+                case "S":
+                    Inputs.sHeld = false;
+                    break;
+                case "D":
+                    Inputs.dHeld = false;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        @Override
+        public void keyTyped(KeyEvent e) {
+            // intentionally blank
+        }
+    }
+
+
+        private static class MouseHandler implements MouseInputListener {
 
         @Override
         public void mouseClicked(MouseEvent e) {

@@ -43,8 +43,8 @@ public abstract class AtomicExpression extends BlockExpression {
         // drawn here must be offset by 5 as well. painting at raw screen coordinates
         // used to leave a stale copy of the atomic sitting at the top-left corner of
         // its old slot whenever the block was moved out of (or back into) its parent.
-        double drawX = position.getX() - Global.cameraPos.getX() + 5;
-        double drawY = position.getY() - Global.cameraPos.getY() + 5;
+        double drawX = position.getX() - Global.cameraPos.getX();
+        double drawY = position.getY() - Global.cameraPos.getY();
 
         Polygon textEntryField = Util.createPolygon(
                 new Vector[] {
@@ -181,6 +181,36 @@ public abstract class AtomicExpression extends BlockExpression {
             this.stringContents = stringContents;
             mainColor = new Color(127, 127, 127);
             secondaryColor = new Color(191, 191, 191);
+            outlineColor = Color.BLACK;
+            textColor = Color.BLACK;
+        }
+        @Override
+        public String compile() {
+            return stringContents;
+        }
+
+        @Override
+        public double getValueWidth() {
+            return String.valueOf(stringContents).length() * Consts.LETTER_WIDTH;
+        }
+
+        @Override
+        public String getValueString() {
+            return stringContents;
+        }
+
+        @Override
+        public void setChildElement(int childID, Expression newExpression) {
+            Util.unableToCan();
+        }
+    }
+
+    public static class VarBlock extends AtomicExpression {
+        String stringContents;
+        public VarBlock(String stringContents) {
+            this.stringContents = stringContents;
+            mainColor = new Color(255, 31, 63);
+            secondaryColor = new Color(255, 127, 158);
             outlineColor = Color.BLACK;
             textColor = Color.BLACK;
         }

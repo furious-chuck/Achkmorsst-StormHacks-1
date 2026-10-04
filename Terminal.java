@@ -40,7 +40,7 @@ public class Terminal {
         }
     }
 
-    private static void executeCommand(String commandLine) {
+    public static void executeCommand(String commandLine) {
     try {
         String[] command = commandLine.split("\\s+");
         ProcessBuilder processBuilder = new ProcessBuilder(command);
