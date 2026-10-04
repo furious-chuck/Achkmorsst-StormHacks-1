@@ -161,12 +161,13 @@ public abstract class AtomicExpression extends BlockExpression {
 
         @Override
         public double getValueWidth() {
-            return String.valueOf(stringContents).length() * Consts.LETTER_WIDTH;
+            // include the surrounding quotes in the width so they fit inside the block
+            return (stringContents.length() + 2) * Consts.LETTER_WIDTH;
         }
 
         @Override
         public String getValueString() {
-            return stringContents;
+            return "\"" + stringContents + "\"";
         }
 
         @Override
