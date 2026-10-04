@@ -45,9 +45,9 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     private double getHeaderCascadingHeight() {
         if (condition instanceof BlockExpression be) {
-            return 10 + be.getCascadingHeight();
+            return 20 + be.getCascadingHeight();
         }
-        return 10 + 30;
+        return 20 + 30;
     }
 
     // public void addInternalStorageElement
@@ -71,5 +71,18 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
     @Override
     public void paint(Graphics g) {
         GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), getHeaderCascadingHeight(), getTotalStatementStackHeight(), 10);
+        if (condition == null) {
+            GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(10, 10)).subtract(Global.cameraPos), new RectVector(50, 30));
+        } else if (condition instanceof BlockExpression be) {
+            be.paint(g);
+        } else Util.unableToCan();
+
+        if (cascadeStatementStorage instanceof BlockStatement bs) {
+            bs.paint(g);
+        }
+
+        if (followingStatement instanceof BlockStatement bs) {
+            bs.paint(g);
+        }
     }
 }
