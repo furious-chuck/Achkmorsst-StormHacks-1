@@ -18,8 +18,4 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         return childExpressions;
     }
 
-    @Override
-    public void paint(Graphics g) {
-
-    }
 }

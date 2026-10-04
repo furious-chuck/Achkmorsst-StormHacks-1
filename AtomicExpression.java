@@ -10,6 +10,16 @@ public abstract class AtomicExpression extends BlockExpression {
     public abstract String getValueString();
 
     @Override
+    public double getCascadingHeight() {
+        return Consts.LETTER_HEIGHT + 10;
+    }
+
+    @Override
+    public double getCascadingWidth() {
+        return getValueWidth() + 10;
+    }
+
+    @Override
     public void paint(Graphics g) {
         g.setColor(mainColor);
         Polygon poly = Util.createPolygon(

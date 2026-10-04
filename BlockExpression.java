@@ -9,4 +9,7 @@ public abstract class BlockExpression implements Expression, Paintable {
     public Color outlineColor;
     public Color textColor;
 
+    public abstract double getCascadingHeight();
+    public abstract double getCascadingWidth();
+
 }
