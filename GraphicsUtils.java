@@ -67,6 +67,12 @@ public class GraphicsUtils {
                         (new RectVector(20, 0)).add(positionOnScreen),
                         (new RectVector(width - 2, 0)).add(positionOnScreen),
                         (new RectVector(width, 2)).add(positionOnScreen),
+
+                        (new RectVector(width, headerHeight)).add(positionOnScreen),
+                        (new RectVector(10, headerHeight)).add(positionOnScreen),
+                        (new RectVector(10, headerHeight + gapSize)).add(positionOnScreen),
+                        (new RectVector(width, headerHeight + gapSize)).add(positionOnScreen),
+
                         (new RectVector(width, headerHeight + gapSize + footerHeight - 2)).add(positionOnScreen),
                         (new RectVector(width - 2, headerHeight + gapSize + footerHeight)).add(positionOnScreen),
 

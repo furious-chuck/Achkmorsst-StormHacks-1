@@ -62,7 +62,10 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     @Override
     public double getCascadingWidth() {
-        return 0;
+        if (condition instanceof BlockExpression be) {
+            return 100 + be.getCascadingWidth();
+        }
+        return 100 + 50;
     }
 
     @Override
