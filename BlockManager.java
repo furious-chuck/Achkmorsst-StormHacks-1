@@ -6,6 +6,7 @@ public class BlockManager implements Paintable {
 
     ArrayList<BlockStatement> statements;
     ArrayList<BlockExpression> expressions;
+    SideBar sidebar = new SideBar();
 
 
     public BlockManager(ArrayList<BlockStatement> statements, ArrayList<BlockExpression> expressions) {
@@ -21,6 +22,7 @@ public class BlockManager implements Paintable {
 
     @Override
     public void paint(Graphics g) {
+        sidebar.paint(g);
         for (BlockStatement bs : statements) {
             bs.paint(g);
         }
