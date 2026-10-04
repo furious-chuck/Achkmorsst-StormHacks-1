@@ -22,21 +22,6 @@ public abstract class AtomicExpression extends BlockExpression {
     @Override
     public void paint(Graphics g) {
         g.setColor(mainColor);
-        Polygon poly = Util.createPolygon(
-                new Vector[] {
-                        (new RectVector(2, 0)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 20 - 2, 0)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 20, 2)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 20, Consts.LETTER_HEIGHT + 20 - 2)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 20 - 2, Consts.LETTER_HEIGHT + 20)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(2, Consts.LETTER_HEIGHT + 20)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(0, Consts.LETTER_HEIGHT + 20 - 2)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 + 5)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(-5, Consts.LETTER_HEIGHT / 2.0 + 10)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(0, Consts.LETTER_HEIGHT / 2.0 + 10 - 5)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(0, 2)).add(position).subtract(Global.cameraPos)
-                }
-        );
         Polygon textEntryField = Util.createPolygon(
                 new Vector[] {
                         (new RectVector(5, 5)).subtract(Global.cameraPos),
@@ -45,11 +30,16 @@ public abstract class AtomicExpression extends BlockExpression {
                         (new RectVector(5, Consts.LETTER_HEIGHT + 15)).subtract(Global.cameraPos)
                 }
         );
-        g.fillPolygon(poly);
+        GraphicsUtils.drawThatGoofyExpressionShape(
+            g,
+            mainColor,
+            outlineColor,
+            position.subtract(Global.cameraPos),
+            new RectVector(getValueWidth()+20,Consts.LETTER_HEIGHT+20)
+        );
         g.setColor(secondaryColor);
         g.fillPolygon(textEntryField);
         g.setColor(outlineColor);
-        g.drawPolygon(poly);
         g.drawPolygon(textEntryField);
 
         g.setColor(textColor);
