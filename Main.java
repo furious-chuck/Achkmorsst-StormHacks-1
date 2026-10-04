@@ -2,7 +2,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        BlockExpression be = new AtomicExpression.Numbers.IntNumber(7654);
+        BlockExpression be = new BinaryOperation(null, null, "+");
         be.position = new RectVector();
         Clock c = new Clock(10);
         

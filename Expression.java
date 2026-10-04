@@ -1,1 +1,3 @@
-public interface Expression extends Compilable, HasChildExpressions {}
+public interface Expression extends Compilable, HasChildExpressions {
+    HasChildExpressions getParentExpression();
+}

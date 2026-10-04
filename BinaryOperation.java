@@ -14,6 +14,23 @@ public class BinaryOperation extends BlockExpression {
     }
 
     @Override
+    public void setChildElement(int childID, Expression newExpression) {
+        if (!(newExpression instanceof BlockExpression)) {
+            Util.unableToCan();
+        }
+        BlockExpression be = (BlockExpression) newExpression;
+        if (childID == 0) {
+            child0 = be;
+            child0.parentExpression = this;
+        } else if (childID == 1) {
+            child1 = be;
+            child1.parentExpression = this;
+        } else {
+            Util.unableToCan();
+        }
+    }
+
+    @Override
     public Expression[] getChildExpressions() {
         return new Expression[] { child0, child1 };
     }

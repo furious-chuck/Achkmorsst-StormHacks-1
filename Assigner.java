@@ -4,19 +4,19 @@ public class Assigner extends CascadeCompiledStatement {
 
     boolean hasOperator;
     String shortHandOperator;
-    Expression lValue;
-    Expression rValue;
+    BlockExpression lValue;
+    BlockExpression rValue;
 
 
     public Assigner(Expression lValue, Expression rValue) {
-        this.lValue = lValue;
-        this.rValue = rValue;
+        setChildElement(0, lValue);
+        setChildElement(1, rValue);
         hasOperator = false;
     }
 
     public Assigner(Expression lValue, Expression rValue, String shortHandOperator) {
-        this.lValue = lValue;
-        this.rValue = rValue;
+        setChildElement(0, lValue);
+        setChildElement(1, rValue);
         hasOperator = true;
         if (
                 !Objects.equals(shortHandOperator, "+") &&
@@ -37,5 +37,22 @@ public class Assigner extends CascadeCompiledStatement {
     @Override
     public Expression[] getChildExpressions() {
         return new Expression[] { lValue, rValue };
+    }
+
+    @Override
+    public void setChildElement(int childID, Expression newExpression) {
+        if (!(newExpression instanceof BlockExpression)) {
+            Util.unableToCan();
+        }
+        BlockExpression be = (BlockExpression) newExpression;
+        if (childID == 0) {
+            lValue = be;
+            lValue.parentExpression = this;
+        } else if (childID == 1) {
+            rValue = be;
+            rValue.parentExpression = this;
+        } else {
+            Util.unableToCan();
+        }
     }
 }

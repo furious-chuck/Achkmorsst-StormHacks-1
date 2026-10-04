@@ -40,7 +40,7 @@ public abstract class AtomicExpression extends BlockExpression {
             mainColor,
             outlineColor,
             position.subtract(Global.cameraPos),
-            new RectVector(getValueWidth()+20,Consts.LETTER_HEIGHT+20)
+            new RectVector(getValueWidth() + 20,Consts.LETTER_HEIGHT + 20)
         );
         g.setColor(secondaryColor);
         g.fillPolygon(textEntryField);
@@ -80,6 +80,11 @@ public abstract class AtomicExpression extends BlockExpression {
             public String getValueString() {
                 return String.valueOf(value);
             }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
+            }
         }
 
         static class DoubleNumber extends AtomicExpression {
@@ -106,6 +111,11 @@ public abstract class AtomicExpression extends BlockExpression {
             @Override
             public String getValueString() {
                 return String.valueOf(value);
+            }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
             }
         }
 
@@ -137,6 +147,11 @@ public abstract class AtomicExpression extends BlockExpression {
         @Override
         public String getValueString() {
             return stringContents;
+        }
+
+        @Override
+        public void setChildElement(int childID, Expression newExpression) {
+            Util.unableToCan();
         }
     }
 

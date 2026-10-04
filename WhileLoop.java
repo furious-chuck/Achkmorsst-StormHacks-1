@@ -4,7 +4,7 @@ public class WhileLoop extends CascadeCompiledStatement implements StatementCont
     public Expression condition;
 
     public WhileLoop(Expression condition, Statement cascadeStatementStorage, Statement nextStatement) {
-        this.condition = condition;
+        setChildElement(0, condition);
         this.cascadeStatementStorage = cascadeStatementStorage;
     }
 
@@ -21,5 +21,14 @@ public class WhileLoop extends CascadeCompiledStatement implements StatementCont
     @Override
     public Expression[] getChildExpressions() {
         return new Expression[] { condition };
+    }
+
+    @Override
+    public void setChildElement(int childID, Expression newExpression) {
+        if (childID != 0) Util.unableToCan();
+        if (!(newExpression instanceof BlockExpression)) Util.unableToCan();
+        BlockExpression be = (BlockExpression) newExpression;
+        condition = be;
+        be.parentExpression = this;
     }
 }
