@@ -24,6 +24,10 @@ public class Inputs {
     // the block (if any) the mouse was hovering over on the previous frame during
     // a drag, used to log drop-target changes without spamming the terminal
     static Hoverable lastDropTarget = null;
+    // true when the grabbed block is an atomic/nested expression that has been torn
+    // out of its parent and is now free-floating; set by handleDragStart(), read by
+    // endDrag() so it can register the block as a new root in the BlockManager
+    static boolean draggedBlockIsDetached = false;
 
     /**
      * Determines whether the mouse is currently hovering over a block, and if so,
@@ -171,7 +175,31 @@ public class Inputs {
         Hoverable grabbed = getHoveredBlock(Display.activeBlockManager);
         if (grabbed != null) {
             currentlyDraggingABlock = true;
-            draggedBlock = grabbed.getRootAncestor();
+            draggedBlockIsDetached = false;
+
+            if (grabbed instanceof BlockExpression be && be.getParentBlock() != null) {
+                // Atomic statements (numbers, strings, class blocks) and any other
+                // nested expression can be dragged OUT of their parent: detach it
+                // first (leaving an empty slot/placeholder behind), promote it to a
+                // free-floating root, then drag just that block instead of the whole
+                // enclosing statement tree.
+                Vector grabPos = be.getPosition().clone();
+                be.detachFromParent();
+                if (Display.activeBlockManager != null
+                        && !Display.activeBlockManager.expressions.contains(be)) {
+                    Display.activeBlockManager.expressions.add(be);
+                }
+                // detachFromParent may have re-snapped the slot position; restore the
+                // spot the block was visually at when we grabbed it
+                be.moveSelfAndAllChildrenTo(grabPos);
+                draggedBlock = be;
+                draggedBlockIsDetached = true;
+                System.out.println("detached atomic block from its parent: " + be.getBlockName());
+            } else {
+                // top-level statement or already-free expression: drag its whole tree
+                draggedBlock = grabbed.getRootAncestor();
+            }
+
             dragStartMousePos = mousePos.clone();
             dragStartBlockPos = draggedBlock.getPosition().clone();
             System.out.println("started dragging block: " + draggedBlock.getBlockName());
@@ -197,7 +225,13 @@ public class Inputs {
         if (draggedBlock != null && mouseHeld) {
             Vector delta = mousePos.subtract(dragStartMousePos);
             Vector target = dragStartBlockPos.add(delta);
-            if (draggedBlock instanceof BlockStatement bs) {
+            if (draggedBlockIsDetached && draggedBlock instanceof BlockExpression be) {
+                // detached atomic: its position is recomputed from the parent's slot
+                // layout every frame while packed, but now that it is a free root we
+                // must persist the new position ourselves. moveSelfAndAllChildrenTo
+                // also carries any expressions nested inside the dragged atomic.
+                be.moveSelfAndAllChildrenTo(target);
+            } else if (draggedBlock instanceof BlockStatement bs) {
                 bs.moveSelfAndAllChildrenTo(target);
             } else if (draggedBlock instanceof BlockExpression be) {
                 be.moveSelfAndAllChildrenTo(target);
@@ -234,6 +268,7 @@ public class Inputs {
         dragStartMousePos = null;
         dragStartBlockPos = null;
         lastDropTarget = null;
+        draggedBlockIsDetached = false;
         currentlyDraggingABlock = false;
     }
 }

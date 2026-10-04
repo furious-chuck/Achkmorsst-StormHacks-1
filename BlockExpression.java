@@ -81,4 +81,24 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         moveSelfAndAllChildrenBy(positionChange);
     }
 
+    /**
+     * Detaches this expression from whatever statement/expression it is currently
+     * packed inside of (clearing the parent's slot so a hole appears where the block
+     * used to be) and promotes it to a free-floating root. Does nothing if this
+     * expression is already a root. Used when dragging an atomic out of its parent.
+     */
+    public void detachFromParent() {
+        if (parentExpression == null) {
+            return; // already a root, nothing to detach
+        }
+        Expression[] siblings = parentExpression.getChildExpressions();
+        for (int i = 0; i < siblings.length; i++) {
+            if (siblings[i] == this) {
+                parentExpression.setChildElement(i, null); // clears our slot in the parent
+                break;
+            }
+        }
+        parentExpression = null;
+    }
+
 }
