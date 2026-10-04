@@ -1,5 +1,10 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.ArrayList;
 
@@ -17,12 +22,16 @@ public class SideBar implements Paintable {
 
     @Override
     public void paint(Graphics g) {
-        g.setColor(new Color(0));
-        g.drawRect(0, 0, width, Consts.WINDOW_HEIGHT);
-        g.setColor(new Color(0x7FBFBFBF, true));
-        g.fillRect(0, 0, width, Consts.WINDOW_HEIGHT);
-        g.setColor(new Color(0x000000));
-        g.drawString("ACHKMORSSCRIPT", 30, 30 + JFrame.getFrames()[0].getInsets().top);
+//        g.setColor(new Color(0));
+//        g.drawRect(0, 0, width, Consts.WINDOW_HEIGHT);
+//        g.setColor(new Color(0x7FBFBFBF, true));
+//        g.fillRect(0, 0, width, Consts.WINDOW_HEIGHT);
+        try {
+            g.drawImage(ImageIO.read(new File("./Achkmorsscript_sidebar.png")), 1,24,200,Consts.WINDOW_HEIGHT-24,null);
+//        g.setColor(new Color(0x000000));
+//        g.drawString("ACHKMORSSCRIPT", 30, 30 + JFrame.getFrames()[0].getInsets().top);
+        } catch(IOException e) {
+        }
     }
 
     public int getWidth() {
