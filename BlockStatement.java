@@ -64,8 +64,14 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     public Hoverable findHoveredBlock(Vector mousePos) {
         if (this instanceof ExpressionPackingStatement eps) {
             double elementOffset = eps.leftSpace;
-            for (BlockExpression expression : eps.expressions) {
+            for (int i = 0; i < eps.expressions.length; i++) {
+                BlockExpression expression = eps.expressions[i];
                 if (expression == null) {
+                    // an empty slot is itself a droppable target: report the statement
+                    // containing it so a dragged atomic can be snapped back into this slot
+                    if (eps.slotContainsPoint(i, mousePos)) {
+                        return this;
+                    }
                     elementOffset += eps.defaultSize.getX() + eps.expressionSpacing;
                     continue;
                 }
