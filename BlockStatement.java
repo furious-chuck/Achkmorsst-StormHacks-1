@@ -37,8 +37,18 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         // statements whose constructors don't populate childExpressions would
         // otherwise blow up with an NPE mid-drag. Holes (nulls left by detached
         // children) are preserved so slot indices stay aligned with setChildElement.
-        if (childExpressions == null) {
-            return new Expression[0];
+        if (childExpressions == null || childExpressions.length == 0) {
+            // expression-packing statements (Assigner, VarDeclaration, ...) keep their
+            // real slots in the `expressions` array; report those instead of the empty
+            // field above so detaching an atomic can find (and blank) its slot. Without
+            // this, the parent kept painting a clone of the block inside its own shape
+            // while the dragged copy floated free, and never resized to fit.
+            if (this instanceof ExpressionPackingStatement eps) {
+                return eps.expressions;
+            }
+            if (childExpressions == null) {
+                return new Expression[0];
+            }
         }
         return childExpressions;
     }
@@ -77,6 +87,23 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
      * Returns true if the child was found and removed.
      */
     public boolean removeDirectChildExpression(BlockExpression child) {
+        // for expression-packing statements (Assigner, VarDeclaration, ...) the real
+        // slots live in the `expressions` array, not in the (usually empty)
+        // childExpressions field, so search those first. Without this, detaching an
+        // atomic out of such a statement would find no slot to clear and leave a
+        // clone of the block painted inside the parent while the original floats free.
+        if (this instanceof ExpressionPackingStatement eps) {
+            for (int i = 0; i < eps.expressions.length; i++) {
+                if (eps.expressions[i] == child) {
+                    eps.setChildElement(i, null); // blanks the slot and clears the back-link
+                    if (child.getParentExpression() == this) {
+                        child.parentExpression = null;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
         int index = indexOfOwnChildExpression(child);
         if (index < 0) {
             return false;
@@ -96,6 +123,15 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
      * parent left behind when it was detached.
      */
     public int getFirstEmptyChildSlot() {
+        // packed statements keep their slots in `expressions`, not `childExpressions`
+        if (this instanceof ExpressionPackingStatement eps) {
+            for (int i = 0; i < eps.expressions.length; i++) {
+                if (eps.expressions[i] == null) {
+                    return i;
+                }
+            }
+            return -1;
+        }
         Expression[] kids = getChildExpressions();
         if (kids != null) {
             for (int i = 0; i < kids.length; i++) {

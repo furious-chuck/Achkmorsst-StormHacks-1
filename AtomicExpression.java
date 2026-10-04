@@ -26,20 +26,27 @@ public abstract class AtomicExpression extends BlockExpression {
 
     @Override
     public void paint(Graphics g) {
-        g.setColor(mainColor);
+        // the block's own bounding box (which is what getCascadingWidth/Height and the
+        // parent's slot layout are based on) is centered on `position`, so everything
+        // drawn here must be offset by 5 as well. painting at raw screen coordinates
+        // used to leave a stale copy of the atomic sitting at the top-left corner of
+        // its old slot whenever the block was moved out of (or back into) its parent.
+        double drawX = position.getX() - Global.cameraPos.getX() + 5;
+        double drawY = position.getY() - Global.cameraPos.getY() + 5;
+
         Polygon textEntryField = Util.createPolygon(
                 new Vector[] {
-                        (new RectVector(5, 5)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 15, 5)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 15, Consts.LETTER_HEIGHT + 15)).add(position).subtract(Global.cameraPos),
-                        (new RectVector(5, Consts.LETTER_HEIGHT + 15)).add(position).subtract(Global.cameraPos)
+                        (new RectVector(0, 0)).add(new RectVector(drawX, drawY)),
+                        (new RectVector(getValueWidth() + 10, 0)).add(new RectVector(drawX, drawY)),
+                        (new RectVector(getValueWidth() + 10, Consts.LETTER_HEIGHT + 10)).add(new RectVector(drawX, drawY)),
+                        (new RectVector(0, Consts.LETTER_HEIGHT + 10)).add(new RectVector(drawX, drawY))
                 }
         );
         GraphicsUtils.drawThatGoofyExpressionShape(
             g,
             mainColor,
             outlineColor,
-            position.subtract(Global.cameraPos),
+            new RectVector(drawX, drawY),
             new RectVector(getValueWidth() + 20,Consts.LETTER_HEIGHT + 20)
         );
         g.setColor(secondaryColor);
@@ -48,7 +55,7 @@ public abstract class AtomicExpression extends BlockExpression {
         g.drawPolygon(textEntryField);
 
         g.setColor(textColor);
-        g.drawString(getValueString(), 10 - (int) (Global.cameraPos.getX() - position.getX()), Consts.LETTER_HEIGHT + 10 - (int) (Global.cameraPos.getY() - position.getY()));
+        g.drawString(getValueString(), (int) (drawX + 5), (int) (drawY + Consts.LETTER_HEIGHT + 5));
     }
 
     public static class Numbers {
