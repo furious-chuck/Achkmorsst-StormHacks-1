@@ -2,28 +2,26 @@ import java.awt.*;
 
 public class SideBarElement implements Paintable {
 
-    private final BlockExpression template;
+    private final Paintable template;
     private final RectVector position;
     private final SideBar parent;
 
-    SideBarElement(BlockExpression block, RectVector pos, SideBar parentBar) {
-        template = block;
-        template.moveSelfAndAllChildrenTo(pos);
+    SideBarElement(Paintable block, RectVector pos, SideBar parentBar) {
+        template = block; //this is unused i think
         position = pos;
         parent = parentBar;
     }
 
     @Override
     public void paint(Graphics g) {
-        template.moveSelfAndAllChildrenTo(translatePosition());
         template.paint(g);
     }
 
-    public BlockExpression getTemplate() {
+    public Paintable getBlock() {
         return template;
     }
 
-    public BlockExpression makeBlock() {
+    public Paintable makeBlock() {
         return template;//make this clone it and stuff
     }
 
