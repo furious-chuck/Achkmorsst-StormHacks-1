@@ -1,6 +1,5 @@
 import java.awt.*;
 import java.util.Objects;
-import javax.swing.*;
 
 
 public class OSDetector {
@@ -22,8 +21,7 @@ public class OSDetector {
         return OSNameFinal;
     }
     public static Font CreateFont() {
-        String OSName=getOS();
-        String fontName = switch (OSName) {
+        String fontName = switch (getOS()) {
             case "windows" -> "Consolas";
             case "linux" -> "Inconsolata";
             case "mac" -> "Menlo"; // Apple's standard crisp terminal/code font
