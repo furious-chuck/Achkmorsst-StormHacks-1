@@ -254,8 +254,11 @@ public class Inputs {
     }
 
     /**
-     * Releases the dragged block: reports where it was dropped and clears drag state.
-     * (Snapping/reattaching into the drop target's slot will come later.)
+     * Releases the dragged block. If a free-floating atomic expression was dropped
+     * over an empty (or occupied) slot of an outer container, it is reattached into
+     * that slot via attachToParent(), which snaps it into place and dynamically
+     * resizes the parent — and every container around it — to accommodate it.
+     * Otherwise the block stays wherever it was dropped. Clears drag state either way.
      */
     private static void endDrag(BlockManager blockManager) {
         System.out.println("dropped block: " + draggedBlock.getBlockName()
@@ -264,11 +267,133 @@ public class Inputs {
                 + (lastDropTarget != null
                         ? " over block: " + lastDropTarget.getBlockName()
                         : " on empty space"));
+
+        // try to snap a free-floating atomic back into the container it was dropped on
+        if (draggedBlock instanceof BlockExpression be && be.getParentExpression() == null) {
+            Vector grabPoint = new RectVector(
+                    mousePos.getX() + Global.cameraPos.getX(),
+                    mousePos.getY() + Global.cameraPos.getY());
+            HasChildExpressions newParent = findReattachSlot(blockManager, be, grabPoint);
+            if (newParent != null) {
+                int slot = slotIndexFor(newParent, be, grabPoint);
+                if (slot >= 0) {
+                    be.attachToParent(newParent, slot);
+                    if (blockManager.expressions.contains(be)) {
+                        blockManager.expressions.remove(be); // no longer a free root
+                    }
+                    System.out.println("reattached atomic block into "
+                            + newParent.getClass().getSimpleName() + " slot " + slot);
+                }
+            }
+        }
+
         draggedBlock = null;
         dragStartMousePos = null;
         dragStartBlockPos = null;
         lastDropTarget = null;
         draggedBlockIsDetached = false;
         currentlyDraggingABlock = false;
+    }
+
+    /**
+     * Finds the innermost container with an open slot under the cursor that can
+     * accept the dragged expression, or null if there is no valid reattach target.
+     * A container qualifies only if some slot accepts the block type (see
+     * slotAcceptsType) and the dragged block isn't inside that container already.
+     */
+    private static HasChildExpressions findReattachSlot(BlockManager blockManager,
+                                                        BlockExpression dragged,
+                                                        Vector worldMousePos) {
+        HasChildExpressions best = null;
+        double bestArea = Double.MAX_VALUE;
+        for (BlockStatement bs : blockManager.statements) {
+            if (isWithinStatement(bs, dragged)) {
+                continue; // can't drop into ourselves
+            }
+            HasChildExpressions hce = reattachSlotInContainer(bs, dragged, worldMousePos);
+            if (hce != null) {
+                double area = bs.getCascadingWidth() * bs.getCascadingHeight();
+                if (area < bestArea) {
+                    best = hce;
+                    bestArea = area;
+                }
+            }
+        }
+        for (BlockExpression be : blockManager.expressions) {
+            if (isWithinSubtree(be, dragged)) {
+                continue;
+            }
+            HasChildExpressions hce = reattachSlotInContainer(be, dragged, worldMousePos);
+            if (hce != null) {
+                double area = be.getCascadingWidth() * be.getCascadingHeight();
+                if (area < bestArea) {
+                    best = hce;
+                    bestArea = area;
+                }
+            }
+        }
+        return best;
+    }
+
+    /**
+     * If the given container has a slot under worldMousePos that accepts the dragged
+     * block type, returns the container (as the reattach target); otherwise null.
+     */
+    private static HasChildExpressions reattachSlotInContainer(Object block,
+                                                               BlockExpression dragged,
+                                                               Vector worldMousePos) {
+        if (block instanceof ExpressionPackingStatement eps) {
+            int slot = eps.getSlotIndexForWorldX(worldMousePos.getX());
+            if (slot >= 0 && eps.slotContainsPoint(slot, worldMousePos)
+                    && slotAcceptsType(dragged, eps.expressions[slot])) {
+                return eps;
+            }
+        } else if (block instanceof ExpressionPackingExpression epe) {
+            int slot = epe.getSlotIndexForWorldX(worldMousePos.getX());
+            if (slot >= 0 && epe.slotContainsPoint(slot, worldMousePos)
+                    && slotAcceptsType(dragged, epe.expressions[slot])) {
+                return epe;
+            }
+        } else if (block instanceof WhileLoop wl) {
+            if (wl.condition == null && slotAcceptsType(dragged, null)
+                    && wl.containsPoint(worldMousePos)) {
+                return wl;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolves the slot index to attach the dragged block into within the target
+     * container, preferring the exact slot under the cursor.
+     */
+    private static int slotIndexFor(HasChildExpressions parent, BlockExpression dragged,
+                                    Vector worldMousePos) {
+        if (parent instanceof ExpressionPackingStatement eps) {
+            int slot = eps.getSlotIndexForWorldX(worldMousePos.getX());
+            if (slot >= 0 && eps.slotContainsPoint(slot, worldMousePos)) {
+                return slot;
+            }
+        } else if (parent instanceof ExpressionPackingExpression epe) {
+            int slot = epe.getSlotIndexForWorldX(worldMousePos.getX());
+            if (slot >= 0 && epe.slotContainsPoint(slot, worldMousePos)) {
+                return slot;
+            }
+        } else if (parent instanceof WhileLoop) {
+            return 0; // the condition slot is WhileLoop's only expression slot
+        }
+        return -1;
+    }
+
+    /**
+     * Type check for whether the dragged block may occupy a slot. Empty slots accept
+     * any expression; occupied slots only accept a block whose outermost type matches
+     * the incumbent's (e.g. a number replaces a number, not a class-name block).
+     */
+    private static boolean slotAcceptsType(BlockExpression dragged, Expression incumbent) {
+        if (incumbent == null) {
+            return true;
+        }
+        return dragged.getClass() == incumbent.getClass();
     }
 }

@@ -15,6 +15,7 @@ public class Assigner extends ExpressionPackingStatement {
     }
 
     public Assigner(Expression lValue, Expression rValue, String shortHandOperator) {
+        expressions = new BlockExpression[2];
         setChildElement(0, lValue);
         setChildElement(1, rValue);
         hasOperator = true;

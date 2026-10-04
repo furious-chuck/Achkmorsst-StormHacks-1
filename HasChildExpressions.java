@@ -11,6 +11,9 @@ public interface HasChildExpressions {
      */
     default int indexOfChild(Expression child) {
         Expression[] kids = getChildExpressions();
+        if (kids == null || child == null) {
+            return -1;
+        }
         for (int i = 0; i < kids.length; i++) {
             if (kids[i] == child) {
                 return i;
