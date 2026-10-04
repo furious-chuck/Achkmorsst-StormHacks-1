@@ -116,8 +116,10 @@ class Display extends JFrame {
         Inputs.mousePos = RectVector.castFromPoint(mouseCoor);
 
         // determine whether the mouse is hovering over a block (and which one);
-        // prints hover enter/leave messages to the terminal
-        Inputs.getHoveredBlock(activeBlockManager);
+        // prints hover enter/leave messages to the terminal. While a drag is in
+        // progress, the dragged block's own subtree is excluded from the hit-test so
+        // the copy glued to the cursor can never shadow the real blocks underneath.
+        Inputs.getHoveredBlock(activeBlockManager, Inputs.currentlyDraggingABlock);
 
         // press -> grab, hold -> move with cursor, release -> drop
         Inputs.handleDrag(activeBlockManager);
