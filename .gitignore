@@ -1,1 +1,7 @@
-(empty)
+# Compiled Java class files
+*.class
+
+# Build output directories
+build/
+out/
+target/

@@ -12,6 +12,24 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
 
     final Vector defaultSize = new RectVector(50, 30);
 
+    /**
+     * Half of the horizontal space added to each gap between two packed slots.
+     * Subclasses that paint something inside those gaps (e.g. Assigner draws its
+     * "=" sign there) widen the gaps by setting this to a larger value so the symbol
+     * never overlaps the neighbouring blocks. The extra width is applied
+     * symmetrically around the centre of every gap, which keeps the existing slot
+     * positions valid for hit-testing and child placement. Same convention as
+     * ExpressionPackingExpression's halfGapExpansion.
+     */
+    double halfGapExpansion = 0;
+
+    /**
+     * Total horizontal expansion added to every gap between two packed slots.
+     */
+    double gapExpansion() {
+        return halfGapExpansion * 2;
+    }
+
     // Layout accessors (kept in sync with ExpressionPackingExpression's): every
     // paint()/hit-test loop that walks these slots — including the duplicated ones in
     // Inputs and BlockStatement — must read them through these methods so any subclass
@@ -22,7 +40,7 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
     }
 
     double slotSpacingForLayout() {
-        return expressionSpacing;
+        return expressionSpacing + gapExpansion();
     }
 
     /**
@@ -57,7 +75,7 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
         for (BlockExpression exp : expressions) {
             total += exp == null ? defaultSize.getX() : exp.getCascadingWidth();
         }
-        total += expressionSpacing * (expressions.length - 1);
+        total += (expressionSpacing + gapExpansion()) * (expressions.length - 1);
         return total;
     }
 
@@ -69,7 +87,10 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
         for (int i = 0; i < index; i++) {
             total += expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
         }
-        total += expressionSpacing * index;
+        // the gap expansion is centred on each gap, so every slot after the first one
+        // is shifted right by exactly one half-expansion (and the last slot sits before
+        // a trailing half-expansion, which getCascadingWidth adds back on the right)
+        total += (expressionSpacing + gapExpansion()) * index - halfGapExpansion;
         return total;
     }
 
@@ -80,7 +101,10 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
      */
     public int getSlotIndexForWorldX(double worldX) {
         double localX = worldX - position.getX();
-        double offset = leftSpaceForLayout();
+        // the first slot starts at leftSpace; each following slot is shifted by one
+        // half-expansion (the gap expansion is centred on the gaps), so normalise the
+        // coordinate back into the un-expanded layout before measuring the slots
+        double offset = leftSpaceForLayout() - halfGapExpansion;
         for (int i = 0; i < expressions.length; i++) {
             double w = expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
             if (localX >= offset && localX <= offset + w) {
@@ -142,10 +166,20 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
         GraphicsUtils.drawStatementShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
     }
 
+    /**
+     * Hook for subclasses that want to draw something on top of the statement's shape
+     * (e.g. Assigner paints its "=" sign in the gap between the two packed atomic
+     * expressions). Called from paint() after the main shape is drawn but before the
+     * child blocks/placeholder slots are painted, so children always sit on top.
+     */
+    protected void paintOverMainShape(Graphics g) {
+    }
+
     @Override
     public void paint(Graphics g) {
         paintMainShape(g);
-        double elementOffset = leftSpaceForLayout();
+        paintOverMainShape(g);
+        double elementOffset = leftSpaceForLayout() - halfGapExpansion;
         for (BlockExpression expression : expressions) {
             if (expression == null) {
                 GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(elementOffset, 10)).subtract(Global.cameraPos), defaultSize);
