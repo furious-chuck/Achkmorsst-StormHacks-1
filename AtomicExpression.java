@@ -149,8 +149,8 @@ public abstract class AtomicExpression extends BlockExpression {
                 if (stringContents.charAt(i) == '"') this.stringContents += "\\";
                 this.stringContents += stringContents.charAt(i);
             }
-            mainColor = new Color(0, 255, 0);
-            secondaryColor = new Color(127, 255, 127);
+            mainColor = new Color(191, 191, 0);
+            secondaryColor = new Color(255, 255, 127);
             outlineColor = Color.BLACK;
             textColor = Color.BLACK;
         }
@@ -172,6 +172,70 @@ public abstract class AtomicExpression extends BlockExpression {
         @Override
         public void setChildElement(int childID, Expression newExpression) {
             Util.unableToCan();
+        }
+    }
+
+    public static class Boolean {
+        private Boolean() {}
+
+        public static class True extends AtomicExpression {
+
+            public True() {
+                mainColor = Color.GREEN;
+                secondaryColor = Color.GREEN;
+                textColor = Color.BLACK;
+            }
+
+            @Override
+            public String compile() {
+                return "true";
+            }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
+            }
+
+            @Override
+            public double getValueWidth() {
+                return Consts.LETTER_WIDTH * 5;
+            }
+
+            @Override
+            public String getValueString() {
+                return "true";
+            }
+            
+        }
+
+        public static class False extends AtomicExpression {
+
+            public False() {
+                mainColor = Color.RED;
+                secondaryColor = Color.RED;
+                textColor = Color.BLACK;
+            }
+
+            @Override
+            public String compile() {
+                return "false";
+            }
+
+            @Override
+            public void setChildElement(int childID, Expression newExpression) {
+                Util.unableToCan();
+            }
+
+            @Override
+            public double getValueWidth() {
+                return Consts.LETTER_WIDTH * 5;
+            }
+
+            @Override
+            public String getValueString() {
+                return "false";
+            }
+            
         }
     }
 
