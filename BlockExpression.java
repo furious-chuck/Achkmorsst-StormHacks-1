@@ -64,8 +64,8 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         return null;
     }
 
-    public abstract double getCascadingHeight();
-    public abstract double getCascadingWidth();
+    // public abstract double getCascadingHeight();
+    // public abstract double getCascadingWidth();
 
     public void moveSelfAndAllChildrenBy(Vector positionChange) {
         position = position.add(positionChange);
