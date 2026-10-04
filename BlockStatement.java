@@ -43,4 +43,11 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         followingStatement = nextStatement;
     }
 
+    public double getTotalStatementStackHeight() {
+        if (followingStatement instanceof BlockStatement bs) {
+            return getCascadingHeight() + bs.getTotalStatementStackHeight();
+        }
+        return getCascadingHeight();
+    }
+
 }
