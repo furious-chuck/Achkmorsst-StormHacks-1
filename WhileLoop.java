@@ -123,7 +123,13 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
     @Override
     public void paint(Graphics g) {
         double headerSize = getHeaderCascadingHeight();
-        GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), headerSize, getTotalStatementStackHeight() - headerSize - 10, 10);
+        double gap;
+        if (cascadeStatementStorage instanceof BlockStatement bs) {
+            gap = bs.getTotalStatementStackHeight();
+        } else {
+            gap = 30;
+        }
+        GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), headerSize, gap, 10);
         if (condition == null) {
             GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(10, 10)).subtract(Global.cameraPos), new RectVector(50, 30));
         } else if (condition instanceof BlockExpression be) {
