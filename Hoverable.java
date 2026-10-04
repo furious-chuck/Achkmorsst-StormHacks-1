@@ -26,4 +26,25 @@ public interface Hoverable {
      * A human-readable name for this block, used when reporting hovers to the terminal.
      */
     String getBlockName();
+
+    /**
+     * The parent this block is packed inside of (as an expression slot), or null if
+     * this block is a root in the BlockManager. Used by dragging so grabbing a nested
+     * child drags its whole outermost root instead of tearing it out of its parent.
+     */
+    Hoverable getParentBlock();
+
+    /**
+     * Returns the outermost ancestor of this block (walking up through parent
+     * expressions); for a root block this returns itself.
+     */
+    default Hoverable getRootAncestor() {
+        Hoverable current = this;
+        Hoverable parent = current.getParentBlock();
+        while (parent != null) {
+            current = parent;
+            parent = current.getParentBlock();
+        }
+        return current;
+    }
 }

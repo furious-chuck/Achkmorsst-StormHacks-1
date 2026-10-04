@@ -20,6 +20,17 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
         return position;
     }
 
+    /**
+     * The statement/expression this block is packed inside of, or null if it is a
+     * root in the BlockManager.
+     */
+    @Override
+    public Hoverable getParentBlock() {
+        // the parent is always a BlockStatement/BlockExpression (which are Hoverable);
+        // fall back to null for any non-block parent, treating this as a root
+        return parentExpression instanceof Hoverable h ? h : null;
+    }
+
     @Override
     public String getBlockName() {
         return getClass().getSimpleName();

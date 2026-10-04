@@ -16,6 +16,14 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         return position;
     }
 
+    /**
+     * Statement roots have no parent block, so they are their own root ancestor.
+     */
+    @Override
+    public Hoverable getParentBlock() {
+        return null;
+    }
+
     @Override
     public String getBlockName() {
         return getClass().getSimpleName();
