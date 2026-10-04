@@ -320,9 +320,86 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         moveSelfAndAllChildrenBy(positionChange);
     }
 
+    /**
+     * Moves ONLY this statement (not its packed children or the statements connected
+     * below it) to a new world-space position. Used when a block has been torn out of
+     * a stack and is being dragged as an independent root: its children must follow
+     * visually, but paint()/hit-testing recompute child slots from the parent's live
+     * position anyway, and the old tail keeps its own place in the chain.
+     */
+    public void moveSelfOnlyTo(Vector newPosition) {
+        position = newPosition;
+    }
+
+    /**
+     * The statement directly connected below this one, or null when this is the end
+     * of a chain.
+     */
+    public BlockStatement getFollowingBlockStatement() {
+        return followingStatement instanceof BlockStatement bs ? bs : null;
+    }
+
+    /**
+     * Number of statements chained below this one (0 when nothing follows).
+     */
+    public int getChainLengthBelow() {
+        int n = 0;
+        for (BlockStatement cur = getFollowingBlockStatement(); cur != null;
+                 cur = cur.getFollowingBlockStatement()) {
+            n++;
+        }
+        return n;
+    }
+
+    /**
+     * True if `target` appears somewhere in the following-statement chain starting
+     * at this statement (excluding this statement itself).
+     */
+    public boolean chainContains(BlockStatement target) {
+        for (BlockStatement cur = getFollowingBlockStatement(); cur != null;
+                 cur = cur.getFollowingBlockStatement()) {
+            if (cur == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void connectNextStatement(BlockStatement nextStatement) {
         nextStatement.moveSelfAndAllChildrenTo(this.position.add(new RectVector(0, getCascadingHeight())));
         followingStatement = nextStatement;
+    }
+
+    /**
+     * Breaks the connection between this statement and whatever is attached below
+     * it, returning that block (or null when nothing follows). The detached tail
+     * keeps its current position so it stays exactly where the user dragged it —
+     * only the backend link is forgotten. This is what keeps cascadeCompile() and
+     * paint() in sync with what is on screen: without it, a block moved away from
+     * the stack still compiles as part of the original program.
+     */
+    public BlockStatement disconnectNextStatement() {
+        if (!(followingStatement instanceof BlockStatement bs)) {
+            return null;
+        }
+        followingStatement = null;
+        return bs;
+    }
+
+    /**
+     * True when the statement directly below this one in the connection chain
+     * visually touches this statement's bottom edge again (within `tolerance`
+     * pixels), i.e. the blocks are stacked like they were connected. Used by the
+     * drag/drop logic to decide whether a moved-away block should stay detached
+     * or snap back into the chain.
+     */
+    public boolean isVisuallyConnectedToNext(double tolerance) {
+        if (!(followingStatement instanceof BlockStatement bs)) {
+            return false;
+        }
+        double gapX = Math.abs(bs.position.getX() - position.getX());
+        double gapY = Math.abs(bs.position.getY() - (position.getY() + getCascadingHeight()));
+        return gapX <= tolerance && gapY <= tolerance;
     }
 
     public double getTotalStatementStackHeight() {

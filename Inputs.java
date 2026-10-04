@@ -15,6 +15,11 @@ public class Inputs {
     static boolean mousePressed = false;
     static boolean mouseHeldLastFrame = false;
 
+    // tolerance (world pixels) for considering two stacked statements visually
+    // connected: within this distance of the exact snap position, dropping a block
+    // under another one reconnects them; beyond it they are separate programs
+    static final double CONNECTION_SNAP_TOLERANCE = 12.0;
+
     // the block (if any) the mouse was hovering over last frame, used to detect
     // hover enter/exit transitions so we don't spam the terminal every frame
     static Hoverable hoveredBlockLastFrame = null;
@@ -23,6 +28,13 @@ public class Inputs {
     // the root block currently being dragged (outermost ancestor of the grabbed
     // block), or null when nothing is being dragged
     static Hoverable draggedBlock = null;
+    // true while the dragged root is a statement that was torn out of a connected
+    // stack by splitChainAround(); endDrag() then decides whether to reconnect it
+    // (dropped back on the chain) or keep the blocks separate (dropped away)
+    static boolean draggedStatementWasSplit = false;
+    // the following-statement tail the grabbed block carried when it was split out
+    // of its old stack; kept so a drop onto empty space can restore it intact
+    static BlockStatement draggedStatementTail = null;
     // screen-space mouse position captured on the frame the drag started; the
     // grabbed block is moved by (current mouse - this anchor) each frame so it
     // stays glued to the cursor without jitter
@@ -334,6 +346,23 @@ public class Inputs {
             } else {
                 // top-level statement or already-free expression: drag its whole tree
                 draggedBlock = grabbed.getRootAncestor();
+
+                if (grabbed instanceof BlockStatement grabbedBs) {
+                    // Grabbing a statement that lives inside a connected stack must
+                    // actually TEAR it out of that stack. Until now only the position
+                    // changed: the links above (`prev.followingStatement == grabbed`)
+                    // and below (`grabbed.followingStatement`) stayed intact, so the
+                    // backend still saw the moved-apart blocks as connected — they kept
+                    // compiling as one program even though they no longer touch.
+                    if (draggedBlock != grabbed) {
+                        // an outer container (e.g. the WhileLoop wrapping this block's
+                        // body): dragging moves the whole container instead; it stays
+                        // logically connected to its contents, so nothing to split.
+                        draggedBlock = grabbed;
+                    } else {
+                        splitChainAround(grabbedBs, Display.activeBlockManager);
+                    }
+                }
             }
 
             dragStartMousePos = mousePos.clone();
@@ -342,6 +371,151 @@ public class Inputs {
         } else {
             currentlyDraggingABlock = false;
         }
+    }
+
+    /**
+     * Tears the given statement out of every connected stack it belongs to, so that
+     * dragging it away genuinely disconnects it in the backend instead of leaving the
+     * old `followingStatement` links intact (the bug where moved-apart blocks still
+     * compiled as one program). Handles both ways a stack can exist:
+     *  - a chain of statements linked via followingStatement (A -> B -> C), where the
+     *    grabbed block may be the head, the tail, or somewhere in the middle;
+     *  - a statement packed as another container's body (e.g. an Assigner inside a
+     *    WhileLoop's body slot — containers keep their body in named fields rather
+     *    than in the BlockManager's root list).
+     * The grabbed block keeps whatever was attached below it (it travels with the
+     * drag, like pulling the middle of a chain); everything left behind stays put
+     * and becomes its own independent root program.
+     */
+    private static void splitChainAround(BlockStatement grabbed, BlockManager bm) {
+        boolean split = false;
+
+        // remember the tail we are dragging along so a drop onto empty space can
+        // restore it if no reconnect happens
+        draggedStatementTail = grabbed.getFollowingBlockStatement();
+
+        // 1) cut any link that points INTO the grabbed block from above
+        if (bm != null) {
+            for (BlockStatement root : new ArrayList<>(bm.statements)) {
+                BlockStatement prev = statementPrecedingInChain(root, grabbed);
+                if (prev != null) {
+                    prev.disconnectNextStatement();
+                    split = true;
+                }
+            }
+        }
+        // also walk down into nested container bodies (WhileLoop bodies etc.)
+        if (grabbed.getParentBlock() instanceof BlockStatement outerContainer
+                && detachBodyFromContainer(outerContainer, grabbed)) {
+            split = true;
+        }
+
+        // 2) the grabbed block itself is now the head of its own chain: promote it
+        if (bm != null && !bm.statements.contains(grabbed)) {
+            bm.statements.add(grabbed);
+            split = true;
+        }
+
+        // 3) the tail hanging below the grabbed block travels WITH the drag, so the
+        //    stack left behind must not still reference it — nothing else may claim
+        //    the grabbed block's subtree as part of its own chain anymore. (The tail
+        //    stays reachable through `grabbed`, which step 2 promoted to a root.)
+
+        draggedStatementWasSplit = split;
+    }
+
+    /**
+     * Returns the statement directly above `target` in the chain rooted at `root`
+     * (walking followingStatement links), or null if target is not in that chain.
+     */
+    private static BlockStatement statementPrecedingInChain(BlockStatement root,
+                                                             BlockStatement target) {
+        for (BlockStatement cur = root; cur != null; cur = cur.getFollowingBlockStatement()) {
+            if (cur.getFollowingBlockStatement() == target) {
+                return cur;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * If `body` is currently stored as a direct child statement of the container
+     * `outer` (in whichever named field that container uses), clears that field so
+     * the dragged body no longer belongs to the container. Returns true when such a
+     * link existed and was removed.
+     */
+    private static boolean detachBodyFromContainer(BlockStatement outer, BlockStatement body) {
+        if (outer instanceof WhileLoop wl && wl.cascadeStatementStorage == body) {
+            wl.cascadeStatementStorage = null;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Decides what happens to a dragged STATEMENT that was torn out of a stack and
+     * dropped over empty space (no expression-slot target): if it ended up stacked
+     * directly under another statement — close enough to look connected — snap it
+     * into place and reconnect, so the backend matches the picture; otherwise keep
+     * the blocks separate, leaving the dragged chain exactly where the user released
+     * it. This is the fix for blocks that visually moved apart but stayed connected
+     * in the compiled program: grab already severed the old links (splitChainAround),
+     * and this decides whether any link is re-established at the drop point.
+     */
+    private static void finalizeStatementDrop(BlockStatement bs, BlockManager blockManager) {
+        BlockStatement snapTarget = findStatementSnapTarget(bs, blockManager);
+        if (snapTarget != null) {
+            // reconnect under the block we were dropped onto; connectNextStatement
+            // snaps our whole carried chain into place below it
+            snapTarget.connectNextStatement(bs);
+            System.out.println("reconnected statement under " + snapTarget.getBlockName());
+        } else {
+            System.out.println("statement dropped away from the stack: kept disconnected");
+        }
+        if (blockManager != null && !blockManager.statements.contains(bs)) {
+            blockManager.statements.add(bs);
+        }
+    }
+
+    /**
+     * Finds the statement whose bottom edge the dragged block `bs` is resting on:
+     * scans every root chain in the manager (excluding bs's own chain) for the
+     * deepest statement whose bounding box overlaps the dragged block's box while
+     * sitting ABOVE its top edge. Dropping onto that statement means "connect me
+     * underneath you". Returns null when nothing qualifies (dropped in empty space).
+     */
+    private static BlockStatement findStatementSnapTarget(BlockStatement bs,
+                                                           BlockManager blockManager) {
+        if (blockManager == null) {
+            return null;
+        }
+        double left = bs.position.getX();
+        double right = left + bs.getCascadingWidth();
+        double top = bs.position.getY();
+        BlockStatement best = null;
+        double bestBottom = -Double.MAX_VALUE;
+        for (BlockStatement root : blockManager.statements) {
+            if (root == bs || root.chainContains(bs)) {
+                continue; // never snap onto our own chain
+            }
+            for (BlockStatement cur = root; cur != null;
+                     cur = cur.getFollowingBlockStatement()) {
+                if (cur == bs) {
+                    break;
+                }
+                double cLeft = cur.position.getX();
+                double cRight = cLeft + cur.getCascadingWidth();
+                double cTop = cur.position.getY();
+                double cBottom = cTop + cur.getCascadingHeight();
+                boolean horizontalOverlap = cLeft < right && cRight > left;
+                boolean aboveDragged = cTop < top && cBottom <= top + CONNECTION_SNAP_TOLERANCE;
+                if (horizontalOverlap && aboveDragged && cBottom > bestBottom) {
+                    best = cur;
+                    bestBottom = cBottom;
+                }
+            }
+        }
+        return best;
     }
 
     /**
@@ -388,7 +562,15 @@ public class Inputs {
                     }
                 }
             } else if (draggedBlock instanceof BlockStatement bs) {
-                bs.moveSelfAndAllChildrenTo(target);
+                if (draggedStatementWasSplit) {
+                    // the grabbed statement was torn out of its old stack at press
+                    // time: only move IT (paint/hit-testing lay its packed children
+                    // out from its live position), so the chain it left behind stays
+                    // exactly where it was instead of being dragged along too
+                    bs.moveSelfOnlyTo(target);
+                } else {
+                    bs.moveSelfAndAllChildrenTo(target);
+                }
             } else if (draggedBlock instanceof BlockExpression be) {
                 be.moveSelfAndAllChildrenTo(target);
             }
@@ -425,7 +607,12 @@ public class Inputs {
         if (draggedBlock != null && originalBlockPos != null
                 && Math.abs(draggedBlock.getPosition().getX() - originalBlockPos.getX()) < 0.5
                 && Math.abs(draggedBlock.getPosition().getY() - originalBlockPos.getY()) < 0.5) {
-            restoreClickedBlock(blockManager);
+            if (draggedStatementWasSplit) {
+                // a statement clicked inside a stack: undo the split done at grab time
+                restoreSplitStatement(blockManager);
+            } else {
+                restoreClickedBlock(blockManager);
+            }
             clearDragState();
             return;
         }
@@ -520,6 +707,12 @@ public class Inputs {
             }
         }
 
+        // a statement torn out of a connected stack: decide whether the drop point
+        // reconnects it under another block or leaves the stacks properly separated
+        if (draggedStatementWasSplit && draggedBlock instanceof BlockStatement splitBs) {
+            finalizeStatementDrop(splitBs, blockManager);
+        }
+
         draggedBlock = null;
         dragStartMousePos = null;
         dragStartBlockPos = null;
@@ -538,6 +731,8 @@ public class Inputs {
         dragStartBlockPos = null;
         lastDropTarget = null;
         draggedBlockIsDetached = false;
+        draggedStatementWasSplit = false;
+        draggedStatementTail = null;
         currentlyDraggingABlock = false;
         originallyGrabbedBlock = null;
         originalBlockPos = null;
@@ -599,6 +794,67 @@ public class Inputs {
         if (origBe.getParentExpression() != null && draggedBlock == origBe) {
             draggedBlockIsDetached = false;
         }
+    }
+
+    /**
+     * Puts a merely-clicked STATEMENT that was split out of its stack back exactly
+     * where it came from: reconnects it at its old spot in the chain (restoring both
+     * the link from the block above and the tail it carried away) and removes it from
+     * the root list again. Only runs when the grabbed statement never moved — a plain
+     * click must not tear a program apart.
+     */
+    private static void restoreSplitStatement(BlockManager blockManager) {
+        if (!(draggedBlock instanceof BlockStatement bs) || blockManager == null) {
+            return;
+        }
+        // re-link the block that used to point at us, if it is still sitting directly
+        // above our original position
+        Vector startPos = originalBlockPos != null ? originalBlockPos : bs.getPosition();
+        for (BlockStatement root : blockManager.statements) {
+            if (root == bs || root.chainContains(bs)) {
+                continue;
+            }
+            for (BlockStatement cur = root; cur != null;
+                     cur = cur.getFollowingBlockStatement()) {
+                double bottom = cur.position.getY() + cur.getCascadingHeight();
+                boolean linesUp = Math.abs(cur.position.getX() - startPos.getX()) < 0.5
+                        && Math.abs(bottom - startPos.getY()) < 0.5;
+                if (linesUp) {
+                    cur.followingStatement = bs;
+                    break;
+                }
+            }
+        }
+        // the chain we left behind became a root of its own at grab time; it now
+        // hangs below us again, so demote it back into our subtree
+        BlockStatement leftoverRoot = getLeftoverTailRoot(blockManager, bs);
+        if (leftoverRoot != null) {
+            blockManager.statements.remove(leftoverRoot);
+        }
+        // we are no longer an independent root program
+        blockManager.statements.remove(bs);
+        System.out.println("click without movement: statement " + bs.getBlockName()
+                + " put back into its connected stack");
+    }
+
+    /**
+     * Finds the root in `bm` that is actually the tail of `bs`'s own chain (created
+     * when bs was split out of the stack), so it can be demoted once they reconnect.
+     */
+    private static BlockStatement getLeftoverTailRoot(BlockManager bm, BlockStatement bs) {
+        BlockStatement tail = bs.getFollowingBlockStatement();
+        if (tail == null) {
+            return null;
+        }
+        for (BlockStatement root : bm.statements) {
+            if (root == bs) {
+                continue;
+            }
+            if (root == tail || root.chainContains(tail)) {
+                return root;
+            }
+        }
+        return null;
     }
 
     private static HasChildExpressions findSlotAtPosition(ArrayList<BlockStatement> roots,
