@@ -52,18 +52,66 @@ public abstract class ExpressionPackingStatement extends BlockStatement {
         return total;
     }
 
-    @Override
-    public Expression[] getChildExpressions() {
-        return expressions;
+    /**
+     * Returns the slot index whose horizontal span contains the given world-space x,
+     * or -1 if the point is outside this container's packed row. Used when dropping a
+     * dragged atomic back into this container so it lands in the slot under the cursor.
+     */
+    public int getSlotIndexForWorldX(double worldX) {
+        double localX = worldX - position.getX();
+        double offset = leftSpace;
+        for (int i = 0; i < expressions.length; i++) {
+            double w = expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
+            if (localX >= offset && localX <= offset + w) {
+                return i;
+            }
+            offset += w + expressionSpacing;
+        }
+        return -1;
+    }
+
+    /**
+     * Returns true if the given world-space point lies within the bounding box of the
+     * slot at the given index (empty placeholder slots included). Slots are laid out
+     * left-to-right starting at leftSpace with expressionSpacing between them, and sit
+     * verSpace below the top of the container, matching paint()'s convention.
+     */
+    public boolean slotContainsPoint(int index, Vector p) {
+        if (index < 0 || index >= expressions.length) {
+            return false;
+        }
+        double localX = p.getX() - position.getX();
+        double localY = p.getY() - position.getY();
+        double offset = getWidthUpToExpressionAt(index);
+        double w = expressions[index] == null ? defaultSize.getX() : expressions[index].getCascadingWidth();
+        double h = expressions[index] == null ? defaultSize.getY() : expressions[index].getCascadingHeight();
+        return localX >= offset && localX <= offset + w && localY >= verSpace && localY <= verSpace + h;
     }
 
     @Override
     public void setChildElement(int childID, Expression newExpression) {
+        BlockExpression old = expressions[childID];
         if (newExpression == null) {
+            // clearing a slot: detach the old child's parent link so it becomes free-floating
+            if (old != null && old.getParentExpression() == this) {
+                old.parentExpression = null;
+            }
             expressions[childID] = null;
             return;
         }
         BlockExpression be = (BlockExpression) newExpression;
+        // if the block we're packing is already sitting in a different slot of this
+        // same container, clear that old slot first so it doesn't appear twice
+        if (old != be) {
+            int previousIndex = indexOfChild(be);
+            if (previousIndex >= 0 && previousIndex != childID) {
+                expressions[previousIndex] = null;
+            }
+            // whatever used to occupy the target slot is no longer our child
+            if (old != null && old.getParentExpression() == this) {
+                old.parentExpression = null;
+            }
+        }
         expressions[childID] = be;
         be.parentExpression = this;
         be.position = position.add(new RectVector(getWidthUpToExpressionAt(childID), 10));
