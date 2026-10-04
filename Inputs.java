@@ -39,6 +39,11 @@ public class Inputs {
     // world-space position of the grabbed block at press time; if the block is still
     // there at release, the "drag" was really just a click
     static Vector originalBlockPos = null;
+    // the container (and slot index) the grabbed atomic was packed in at press time,
+    // captured BEFORE detachFromParent() clears them; used by restoreClickedBlock() to
+    // put a merely-clicked block straight back into the exact hole it came from
+    static HasChildExpressions originalParent = null;
+    static int originalSlot = -1;
 
     /**
      * Determines whether the mouse is currently hovering over a block, and if so,
@@ -50,6 +55,18 @@ public class Inputs {
      * when it leaves one.
      */
     static Hoverable getHoveredBlock(BlockManager blockManager) {
+        return getHoveredBlock(blockManager, false);
+    }
+
+    /**
+     * Hover detection variant. When `duringDrag` is true, the block currently being
+     * dragged (and its whole subtree) is excluded from the hit-test: while a drag is
+     * in progress its grabbed copy floats on top of everything at the cursor, and it
+     * must never shadow the genuine packed blocks underneath — otherwise pressing on
+     * one container and dragging over another would make the hovered-block search
+     * report the stale position of the dragged copy instead of the real target.
+     */
+    static Hoverable getHoveredBlock(BlockManager blockManager, boolean duringDrag) {
         if (blockManager == null || mousePos == null) {
             return null;
         }
@@ -62,6 +79,9 @@ public class Inputs {
         double deepestArea = Double.MAX_VALUE;
 
         for (BlockStatement bs : blockManager.statements) {
+            if (duringDrag && draggedBlock != null && isWithinStatement(bs, draggedBlock)) {
+                continue; // the dragged tree must not claim the hover while it moves
+            }
             Hoverable found = bs.findHoveredBlock(worldMousePos);
             if (found != null) {
                 double area = found.getCascadingWidth() * found.getCascadingHeight();
@@ -72,6 +92,10 @@ public class Inputs {
             }
         }
         for (BlockExpression be : blockManager.expressions) {
+            if (duringDrag && draggedBlock != null
+                    && (be == draggedBlock || isWithinSubtree(be, draggedBlock))) {
+                continue; // same for free-floating roots being dragged
+            }
             Hoverable found = be.findHoveredBlock(worldMousePos);
             if (found != null) {
                 double area = found.getCascadingWidth() * found.getCascadingHeight();
@@ -248,6 +272,27 @@ public class Inputs {
             originalBlockPos = grabbed.getPosition().clone();
 
             if (grabbed instanceof BlockExpression be && be.getParentBlock() != null) {
+                // remember exactly where this atomic lives BEFORE detaching it: the
+                // click-restore path needs the container + slot, and detachFromParent
+                // clears both. (For packed children of an ExpressionPackingStatement the
+                // stored position can be stale — paint()/hit-tests recompute slots from
+                // the parent — so prefer the live layout when available.)
+                HasChildExpressions preParent = be.getParentExpression();
+                originalParent = preParent;
+                originalSlot = preParent.indexOfChild(be);
+                if (originalSlot < 0 && preParent instanceof ExpressionPackingStatement epsPre) {
+                    for (int i = 0; i < epsPre.expressions.length; i++) {
+                        if (epsPre.expressions[i] == be) {
+                            originalSlot = i;
+                            break;
+                        }
+                    }
+                }
+                if (originalSlot < 0 && preParent != null) {
+                    Vector pp = be.getPosition();
+                    originalSlot = slotIndexAtPosition(preParent, be, pp);
+                }
+
                 // Atomic statements (numbers, strings, class blocks) and any other
                 // nested expression can be dragged OUT of their parent: detach it
                 // first (leaving an empty slot/placeholder behind), promote it to a
@@ -257,6 +302,17 @@ public class Inputs {
                 if (Display.activeBlockManager != null
                         && !Display.activeBlockManager.expressions.contains(be)) {
                     Display.activeBlockManager.expressions.add(be);
+                }
+                // snap the freed block onto the exact rectangle it was drawn in, so the
+                // detached copy stays visually glued to the spot under the cursor even
+                // if its stored position had drifted away from the parent's slot layout
+                // (a stale position would otherwise make the block teleport/jump out
+                // from under the mouse the instant the button goes down).
+                if (preParent instanceof ExpressionPackingStatement eps
+                        && originalSlot >= 0 && originalSlot < eps.expressions.length
+                        && eps.expressions[originalSlot] == null) {
+                    be.moveSelfAndAllChildrenTo(
+                            eps.position.add(new RectVector(eps.getWidthUpToExpressionAt(originalSlot), 10)));
                 }
                 // NOTE: we deliberately do NOT re-snap the block to grabPos here. The
                 // drag anchors below (dragStartMousePos/dragStartBlockPos) are recorded
@@ -305,6 +361,26 @@ public class Inputs {
                 // must persist the new position ourselves. moveSelfAndAllChildrenTo
                 // also carries any expressions nested inside the dragged atomic.
                 be.moveSelfAndAllChildrenTo(target);
+
+                // A plain press-and-hold without movement keeps the block exactly where
+                // it was drawn — visually nothing changed, but logically it now floats
+                // free over the very hole it came from. If we ran the generic hover scan
+                // here, the container underneath would claim the cursor point and grab
+                // *that* block on the next press, tearing the canvas apart around a
+                // half-detached copy. Instead, keep re-grabbing the dragged block itself
+                // so holding/releasing repeatedly on an unmoved atomic stays stable.
+                boolean unmoved = originalBlockPos != null
+                        && Math.abs(be.getPosition().getX() - originalBlockPos.getX()) < 0.5
+                        && Math.abs(be.getPosition().getY() - originalBlockPos.getY()) < 0.5;
+                if (unmoved) {
+                    draggedBlock = be;
+                    originallyGrabbedBlock = be;
+                    dragStartMousePos = mousePos.clone();
+                    dragStartBlockPos = be.getPosition().clone();
+                    if (!blockManager.expressions.contains(be)) {
+                        blockManager.expressions.add(be);
+                    }
+                }
             } else if (draggedBlock instanceof BlockStatement bs) {
                 bs.moveSelfAndAllChildrenTo(target);
             } else if (draggedBlock instanceof BlockExpression be) {
@@ -346,6 +422,40 @@ public class Inputs {
             restoreClickedBlock(blockManager);
             clearDragState();
             return;
+        }
+
+        // A detached atomic that was dragged around but never landed on a valid slot
+        // would otherwise stay stuck as a free-floating root: the next press on its old
+        // container grabs the container itself, and dragging then rips every packed
+        // child out of it (they all vanish from view). So before dropping it into empty
+        // space for good, give it one last chance to go home to the exact slot it was
+        // grabbed from — if that hole is still empty and nothing else sits over it.
+        if (draggedBlockIsDetached && draggedBlock instanceof BlockExpression beHome
+                && beHome.getParentExpression() == null
+                && originalParent != null && originalSlot >= 0
+                && originalSlot < originalParent.getChildExpressions().length
+                && originalParent.getChildExpressions()[originalSlot] == null) {
+            boolean holeStillUnderCursor = false;
+            double worldX = mousePos.getX() + Global.cameraPos.getX();
+            double worldY = mousePos.getY() + Global.cameraPos.getY();
+            Vector cursorWorld = new RectVector(worldX, worldY);
+            if (originalParent instanceof ExpressionPackingStatement epsH) {
+                holeStillUnderCursor = epsH.slotContainsPoint(originalSlot, cursorWorld);
+            } else if (originalParent instanceof WhileLoop wlH) {
+                holeStillUnderCursor = wlH.headerContainsPoint(cursorWorld);
+            } else if (originalParent instanceof ExpressionPackingExpression epeH) {
+                holeStillUnderCursor = epeH.slotContainsPoint(originalSlot, cursorWorld);
+            }
+            if (holeStillUnderCursor) {
+                beHome.attachToParent(originalParent, originalSlot);
+                if (blockManager != null && blockManager.expressions.contains(beHome)) {
+                    blockManager.expressions.remove(beHome);
+                }
+                System.out.println("atomic dropped without a target: sent back to its "
+                        + "original slot in " + originalParent.getClass().getSimpleName());
+                clearDragState();
+                return;
+            }
         }
 
         System.out.println("dropped block: " + draggedBlock.getBlockName()
@@ -425,6 +535,8 @@ public class Inputs {
         currentlyDraggingABlock = false;
         originallyGrabbedBlock = null;
         originalBlockPos = null;
+        originalParent = null;
+        originalSlot = -1;
     }
 
     /**
@@ -446,20 +558,35 @@ public class Inputs {
         if (origBe.getParentExpression() != null) {
             return; // somehow already re-packed; leave it alone
         }
-        HasChildExpressions host = findSlotAtPosition(blockManager.statements,
-                origBe, originalBlockPos);
-        if (host == null) {
-            host = findSlotInExpressions(blockManager.expressions, origBe, originalBlockPos);
-        }
-        if (host != null) {
-            int slot = slotIndexAtPosition(host, origBe, originalBlockPos);
-            if (slot >= 0 && host.getChildExpressions()[slot] == null) {
-                origBe.attachToParent(host, slot);
-                if (blockManager.expressions.contains(origBe)) {
-                    blockManager.expressions.remove(origBe);
+        // fast path: we recorded the exact container + slot at press time, so put the
+        // block straight back into the hole it came from (if it is still empty)
+        if (originalParent != null && originalSlot >= 0
+                && originalSlot < originalParent.getChildExpressions().length
+                && originalParent.getChildExpressions()[originalSlot] == null) {
+            origBe.attachToParent(originalParent, originalSlot);
+            if (blockManager.expressions.contains(origBe)) {
+                blockManager.expressions.remove(origBe);
+            }
+            System.out.println("click without movement: restored " + origBe.getBlockName()
+                    + " back into " + originalParent.getClass().getSimpleName()
+                    + " slot " + originalSlot);
+        } else {
+            // fallback: walk the tree for any empty slot matching the original position
+            HasChildExpressions host = findSlotAtPosition(blockManager.statements,
+                    origBe, originalBlockPos);
+            if (host == null) {
+                host = findSlotInExpressions(blockManager.expressions, origBe, originalBlockPos);
+            }
+            if (host != null) {
+                int slot = slotIndexAtPosition(host, origBe, originalBlockPos);
+                if (slot >= 0 && host.getChildExpressions()[slot] == null) {
+                    origBe.attachToParent(host, slot);
+                    if (blockManager.expressions.contains(origBe)) {
+                        blockManager.expressions.remove(origBe);
+                    }
+                    System.out.println("click without movement: restored " + origBe.getBlockName()
+                            + " back into " + host.getClass().getSimpleName() + " slot " + slot);
                 }
-                System.out.println("click without movement: restored " + origBe.getBlockName()
-                        + " back into " + host.getClass().getSimpleName() + " slot " + slot);
             }
         }
         // keep the dragged copy consistent with the (possibly re-attached) original

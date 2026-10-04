@@ -207,18 +207,49 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     }
 
     /**
+     * The world-space rectangle paint() actually draws the child at `expression` in,
+     * following this statement's slot layout (left-to-right starting at leftSpace,
+     * verSpace below the top edge — the exact convention paint() uses). Returns null
+     * when the given expression is not one of this statement's packed children.
+     */
+    private Vector paintedSlotPositionOf(BlockExpression expression) {
+        if (this instanceof ExpressionPackingStatement eps) {
+            double elementOffset = eps.leftSpace;
+            for (int i = 0; i < eps.expressions.length; i++) {
+                BlockExpression child = eps.expressions[i];
+                if (child == expression) {
+                    return position.add(new RectVector(elementOffset, 10));
+                }
+                elementOffset += (child == null ? eps.defaultSize.getX()
+                        : child.getCascadingWidth()) + eps.expressionSpacing;
+            }
+            return null;
+        }
+        // non-packing statements (e.g. WhileLoop) lay their children out via
+        // setChildElement, which keeps each child's stored position in sync with the
+        // layout — but only while the child is actually packed here; a foreign block
+        // must not be claimed at all
+        for (Expression exp : getChildExpressions()) {
+            if (exp == expression) {
+                return expression.getPosition();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Searches this statement's packed child slots for the deepest block under the
-     * given world-space point. Slot positions are recomputed from this statement's
-     * current position (the same layout convention paint() uses), so children always
-     * report up-to-date hit areas even after the parent has been moved or resized.
-     * A slot whose own box does not contain the point is skipped outright: this is
-     * what keeps a free-floating (detached/dragged) atomic sitting on top of the row
-     * from being mistaken for a genuine child of this container — such a block is not
-     * packed here anymore, so hitting it must never hide the container underneath it.
+     * given world-space point. Hit-testing follows paint(): a child is only ever hit
+     * at the rectangle this statement actually draws it in (slot positions are
+     * recomputed from our current position, exactly like paint() and the drag-restore
+     * helpers do). This deliberately ignores the child's stale stored position, which
+     * is what keeps a free-floating (detached/dragged) atomic that visually overlaps
+     * this row from being mistaken for a genuine child of this container — such a
+     * block is no longer packed here, so hitting it must never hide the container
+     * underneath it.
      */
     public Hoverable findHoveredChild(Vector mousePos) {
         if (this instanceof ExpressionPackingStatement eps) {
-            double elementOffset = eps.leftSpace;
             for (int i = 0; i < eps.expressions.length; i++) {
                 BlockExpression expression = eps.expressions[i];
                 if (expression == null) {
@@ -227,12 +258,15 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
                     if (eps.slotContainsPoint(i, mousePos)) {
                         return this;
                     }
-                    elementOffset += eps.defaultSize.getX() + eps.expressionSpacing;
                     continue;
                 }
-                // child slot computed from the parent's current position, matching paint()
+                // hit-test the child at its paint-time slot, matching paint()
+                Vector slotPos = paintedSlotPositionOf(expression);
+                if (slotPos == null) {
+                    continue;
+                }
                 Vector previousPosition = expression.position;
-                expression.position = position.add(new RectVector(elementOffset, 10));
+                expression.position = slotPos;
                 Hoverable found = null;
                 if (expression.containsPoint(mousePos)) {
                     found = expression.findHoveredBlock(mousePos);
@@ -241,16 +275,26 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
                 if (found != null) {
                     return found;
                 }
-                elementOffset += expression.getCascadingWidth() + eps.expressionSpacing;
             }
-        } else {
-            for (Expression exp : getChildExpressions()) {
-                if (exp instanceof BlockExpression be && be.containsPoint(mousePos)) {
-                    Hoverable found = be.findHoveredBlock(mousePos);
-                    if (found != null) {
-                        return found;
-                    }
-                }
+            return null;
+        }
+        for (Expression exp : getChildExpressions()) {
+            if (!(exp instanceof BlockExpression be)) {
+                continue;
+            }
+            Vector slotPos = paintedSlotPositionOf(be);
+            if (slotPos == null) {
+                continue;
+            }
+            Vector previousPosition = be.position;
+            be.position = slotPos;
+            Hoverable found = null;
+            if (be.containsPoint(mousePos)) {
+                found = be.findHoveredBlock(mousePos);
+            }
+            be.position = previousPosition;
+            if (found != null) {
+                return found;
             }
         }
         return null;
