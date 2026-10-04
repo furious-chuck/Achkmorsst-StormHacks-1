@@ -1,6 +1,6 @@
 public interface HasChildExpressions {
 
     Expression[] getChildExpressions();
-    void setChildElement(int childID, Expression newExpression);
+    // void setChildExpression(int childID, Expression newExpression);
 
 }

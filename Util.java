@@ -11,11 +11,11 @@ public class Util {
         return poly;
     }
 
-    public void unableToCan() {
+    public static void unableToCan() {
         throw new IllegalStateException("A fatal exception occurred with no context");
     }
 
-    public void unableToCan(String message) {
+    public static void unableToCan(String message) {
         throw new IllegalStateException("A fatal exception occurred with the following message:\n" + message);
     }
 

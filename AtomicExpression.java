@@ -19,6 +19,11 @@ public abstract class AtomicExpression extends BlockExpression {
         return getValueWidth() + 10;
     }
 
+    //@Override
+    public void setChildExpression(int childID, Expression newExpression) {
+        Util.unableToCan();
+    }
+
     @Override
     public void paint(Graphics g) {
         g.setColor(mainColor);
