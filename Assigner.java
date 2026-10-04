@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class Assigner extends CascadeCompiledStatement {
+public class Assigner extends ExpressionPackingExpression {
 
     boolean hasOperator;
     String shortHandOperator;

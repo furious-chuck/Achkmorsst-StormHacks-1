@@ -6,6 +6,7 @@ public class WhileLoop extends CascadeCompiledStatement implements StatementCont
     public WhileLoop(Expression condition, Statement cascadeStatementStorage, Statement nextStatement) {
         setChildElement(0, condition);
         this.cascadeStatementStorage = cascadeStatementStorage;
+        this.nextStatement = nextStatement;
     }
 
     @Override
