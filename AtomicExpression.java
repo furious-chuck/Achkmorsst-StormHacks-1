@@ -29,10 +29,10 @@ public abstract class AtomicExpression extends BlockExpression {
         g.setColor(mainColor);
         Polygon textEntryField = Util.createPolygon(
                 new Vector[] {
-                        (new RectVector(5, 5)).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 15, 5)).subtract(Global.cameraPos),
-                        (new RectVector(getValueWidth() + 15, Consts.LETTER_HEIGHT + 15)).subtract(Global.cameraPos),
-                        (new RectVector(5, Consts.LETTER_HEIGHT + 15)).subtract(Global.cameraPos)
+                        (new RectVector(5, 5)).add(position).subtract(Global.cameraPos),
+                        (new RectVector(getValueWidth() + 15, 5)).add(position).subtract(Global.cameraPos),
+                        (new RectVector(getValueWidth() + 15, Consts.LETTER_HEIGHT + 15)).add(position).subtract(Global.cameraPos),
+                        (new RectVector(5, Consts.LETTER_HEIGHT + 15)).add(position).subtract(Global.cameraPos)
                 }
         );
         GraphicsUtils.drawThatGoofyExpressionShape(
@@ -48,7 +48,7 @@ public abstract class AtomicExpression extends BlockExpression {
         g.drawPolygon(textEntryField);
 
         g.setColor(textColor);
-        g.drawString(getValueString(), 10 - (int) Global.cameraPos.getX(), Consts.LETTER_HEIGHT + 10 - (int) Global.cameraPos.getY());
+        g.drawString(getValueString(), 10 - (int) (Global.cameraPos.getX() - position.getX()), Consts.LETTER_HEIGHT + 10 - (int) (Global.cameraPos.getY() - position.getY()));
     }
 
     public static class Numbers {

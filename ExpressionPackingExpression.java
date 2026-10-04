@@ -4,11 +4,11 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
 
     BlockExpression[] expressions;
 
-    double leftSpace;
-    double expressionSpacing;
-    double rightSpace;
+    double leftSpace = 10;
+    double expressionSpacing = 10;
+    double rightSpace = 10;
 
-    double verSpace;
+    double verSpace = 10;
 
     final Vector defaultSize = new RectVector(50, 30);
 
@@ -48,7 +48,8 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
         for (int i = 0; i < index; i++) {
             total += expressions[i] == null ? defaultSize.getX() : expressions[i].getCascadingWidth();
         }
-        total += expressionSpacing * (index - 1);
+        total += expressionSpacing * index;
+        System.out.println(total);
         return total;
     }
 
@@ -59,11 +60,28 @@ public abstract class ExpressionPackingExpression extends BlockExpression {
 
     @Override
     public void setChildElement(int childID, Expression newExpression) {
-        expressions[childID] = (BlockExpression) newExpression;
+        if (newExpression == null) {
+            expressions[childID] = null;
+            return;
+        }
+        BlockExpression be = (BlockExpression) newExpression;
+        expressions[childID] = be;
+        be.parentExpression = this;
+        be.position = position.add(new RectVector(getWidthUpToExpressionAt(childID), 10));
     }
 
     @Override
     public void paint(Graphics g) {
-        getCascadingHeight();
+        GraphicsUtils.drawThatGoofyExpressionShape(g, Color.MAGENTA, Color.BLACK, position.subtract(Global.cameraPos), new RectVector(getCascadingWidth(), getCascadingHeight()));
+        double elementOffset = leftSpace;
+        for (BlockExpression expression : expressions) {
+            if (expression == null) {
+                GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(elementOffset, 10)).subtract(Global.cameraPos), defaultSize);
+                elementOffset += defaultSize.getX() + expressionSpacing;
+            } else {
+                expression.paint(g);
+                elementOffset += expression.getCascadingWidth() + expressionSpacing;
+            }
+        }
     }
 }
