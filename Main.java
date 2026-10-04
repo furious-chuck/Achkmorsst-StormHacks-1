@@ -25,7 +25,7 @@ public class Main {
         Display.activeBlockManager = bm;
 
         for (int i = 0; i < 1080; i++) {
-            Global.display.paintQueue = new Paintable[] { bm };
+            Global.display.paintQueue = new Paintable[] { be };
             Global.display.update();
             c.tick();
             // bm.statements.get(0).moveSelfAndAllChildrenBy(new RectVector(1, 0));
