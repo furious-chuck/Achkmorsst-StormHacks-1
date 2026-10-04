@@ -214,14 +214,13 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
      */
     private Vector paintedSlotPositionOf(BlockExpression expression) {
         if (this instanceof ExpressionPackingStatement eps) {
-            double elementOffset = eps.leftSpace;
+            // ask the statement itself where it paints slot i — its layout may differ
+            // from the default one (e.g. custom spacing), and hit-testing must follow
+            // paint() exactly
             for (int i = 0; i < eps.expressions.length; i++) {
-                BlockExpression child = eps.expressions[i];
-                if (child == expression) {
-                    return position.add(new RectVector(elementOffset, 10));
+                if (eps.expressions[i] == expression) {
+                    return eps.getSlotPositionAt(i);
                 }
-                elementOffset += (child == null ? eps.defaultSize.getX()
-                        : child.getCascadingWidth()) + eps.expressionSpacing;
             }
             return null;
         }
