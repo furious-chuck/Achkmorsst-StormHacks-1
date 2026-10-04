@@ -149,8 +149,8 @@ public abstract class AtomicExpression extends BlockExpression {
                 if (stringContents.charAt(i) == '"') this.stringContents += "\\";
                 this.stringContents += stringContents.charAt(i);
             }
-            mainColor = new Color(0, 255, 0);
-            secondaryColor = new Color(127, 255, 127);
+            mainColor = new Color(191, 191, 0);
+            secondaryColor = new Color(255, 255, 127);
             outlineColor = Color.BLACK;
             textColor = Color.BLACK;
         }
@@ -180,6 +180,12 @@ public abstract class AtomicExpression extends BlockExpression {
 
         public static class True extends AtomicExpression {
 
+            public True() {
+                mainColor = Color.GREEN;
+                secondaryColor = Color.GREEN;
+                textColor = Color.BLACK;
+            }
+
             @Override
             public String compile() {
                 return "true";
@@ -203,6 +209,12 @@ public abstract class AtomicExpression extends BlockExpression {
         }
 
         public static class False extends AtomicExpression {
+
+            public False() {
+                mainColor = Color.RED;
+                secondaryColor = Color.RED;
+                textColor = Color.BLACK;
+            }
 
             @Override
             public String compile() {

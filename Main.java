@@ -17,7 +17,7 @@ public class Main {
         BlockStatement b1 = new Assigner(new AtomicExpression.VarBlock("x"), new AtomicExpression.Numbers.IntNumber(10), "+");
         bs.connectNextStatement(b1);
         */
-        BlockExpression be = new AtomicExpression.VarBlock("x");
+        BlockExpression be = new AtomicExpression.Boolean.True();
         BlockStatement bs = new Assigner(new AtomicExpression.VarBlock("x"), new AtomicExpression.StringExpression("Hello"));
         BlockStatement ba = new Assigner(new AtomicExpression.StringExpression("second"), new AtomicExpression.Numbers.DoubleNumber(1021));
         BlockStatement bsba = new Assigner(new AtomicExpression.StringExpression("third"), new AtomicExpression.Numbers.DoubleNumber(9));
