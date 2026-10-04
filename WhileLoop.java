@@ -7,8 +7,8 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     public WhileLoop(Expression condition, Statement cascadeStatementStorage, Statement nextStatement) {
         setChildElement(0, condition);
-        this.cascadeStatementStorage = cascadeStatementStorage;
-        this.nextStatement = nextStatement;
+        connectConnectedStatement(cascadeStatementStorage);
+        connectNextStatement((BlockStatement) nextStatement);
     }
 
     @Override
@@ -19,6 +19,14 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
     @Override
     public Statement getContainedStatement() {
         return cascadeStatementStorage;
+    }
+
+    @Override
+    public void connectConnectedStatement(Statement st) {
+        cascadeStatementStorage = st;
+        if (st instanceof BlockStatement bs) {
+            bs.moveSelfAndAllChildrenTo(this.position.add(new RectVector(10, getHeaderCascadingHeight())));
+        }
     }
 
     @Override
@@ -114,7 +122,8 @@ public class WhileLoop extends BlockStatement implements StatementContainer {
 
     @Override
     public void paint(Graphics g) {
-        GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), getHeaderCascadingHeight(), getTotalStatementStackHeight(), 10);
+        double headerSize = getHeaderCascadingHeight();
+        GraphicsUtils.drawStatementShapeWithGap(g, Color.BLUE, Color.BLACK, position.subtract(Global.cameraPos), getCascadingWidth(), headerSize, getTotalStatementStackHeight() - headerSize - 10, 10);
         if (condition == null) {
             GraphicsUtils.drawThatGoofyExpressionShape(g, Color.WHITE, Color.BLACK, position.add(new RectVector(10, 10)).subtract(Global.cameraPos), new RectVector(50, 30));
         } else if (condition instanceof BlockExpression be) {

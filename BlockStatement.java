@@ -310,6 +310,9 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
         if (followingStatement instanceof BlockStatement bs) {
             bs.moveSelfAndAllChildrenBy(positionChange);
         }
+        if (this instanceof StatementContainer sc) {
+            ((BlockStatement) sc.getContainedStatement()).moveSelfAndAllChildrenBy(positionChange);
+        }
     }
 
     public void moveSelfAndAllChildrenTo(Vector newPosition) {
@@ -318,7 +321,7 @@ public abstract class BlockStatement extends CascadeCompiledStatement implements
     }
 
     public void connectNextStatement(BlockStatement nextStatement) {
-        nextStatement.position = this.position.add(new RectVector(0, getCascadingHeight()));
+        nextStatement.moveSelfAndAllChildrenTo(this.position.add(new RectVector(0, getCascadingHeight())));
         followingStatement = nextStatement;
     }
 
