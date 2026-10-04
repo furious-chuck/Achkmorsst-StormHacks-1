@@ -57,27 +57,28 @@ public class BinaryOperation extends ExpressionPackingExpression {
         return new BinaryOperation(left, right, "/");
     }
 
-    @Override
-    protected void paintOverMainShape(Graphics g) {
-        // draw the operator symbol on a highlighted band sitting exactly in the middle
-        // of the gap between the two atomic expressions (the gap was widened by
-        // halfGapExpansion to make room for it). Everything is converted to screen
-        // space via Global.cameraPos, matching paintMainShape().
+    /**
+     * Paints {@code text} on a highlighted band sitting exactly in the middle of the
+     * gap between slot 0 and slot 1 (the gap must have been widened by
+     * halfGapExpansion to make room for it). Shared by BinaryOperation (operator
+     * symbol) and Assigner (the "=" sign). Everything is converted to screen space via
+     * Global.cameraPos, matching paintMainShape().
+     */
+    static void paintSymbolInFirstGap(Graphics g, Vector position, double leftSpace, double slot0Width,
+                                      double expressionSpacing, double totalHeight, String text,
+                                      Color outlineColor, Color textColor) {
         Vector screenPos = position.subtract(Global.cameraPos);
-        double slot0Width = expressions[0] == null ? defaultSize.getX() : expressions[0].getCascadingWidth();
-        double gapCenterX = screenPos.getX() + leftSpaceForLayout() + slot0Width + expressionSpacing / 2.0;
-        double height = getCascadingHeight();
+        double gapCenterX = screenPos.getX() + leftSpace + slot0Width + expressionSpacing / 2.0;
         int bandX = (int) Math.round(gapCenterX - SYMBOL_BAND_WIDTH / 2.0);
         int bandY = (int) Math.round(screenPos.getY());
         int bandW = (int) Math.round(SYMBOL_BAND_WIDTH);
-        int bandH = (int) Math.round(height);
+        int bandH = (int) Math.round(totalHeight);
 
         g.setColor(Color.WHITE);
         g.fillRect(bandX, bandY, bandW, bandH);
         g.setColor(outlineColor);
         g.drawRect(bandX, bandY, bandW, bandH);
 
-        String text = getSymbolDisplayString();
         Font font = g.getFont().deriveFont(Font.BOLD, 14f);
         g.setFont(font);
         FontMetrics fm = g.getFontMetrics(font);
@@ -85,6 +86,16 @@ public class BinaryOperation extends ExpressionPackingExpression {
         int textY = bandY + (bandH - fm.getHeight()) / 2 + fm.getAscent();
         g.setColor(textColor);
         g.drawString(text, textX, textY);
+    }
+
+    @Override
+    protected void paintOverMainShape(Graphics g) {
+        // draw the operator symbol on a highlighted band sitting exactly in the middle
+        // of the gap between the two atomic expressions (the gap was widened by
+        // halfGapExpansion to make room for it)
+        double slot0Width = expressions[0] == null ? defaultSize.getX() : expressions[0].getCascadingWidth();
+        paintSymbolInFirstGap(g, position, leftSpaceForLayout(), slot0Width, expressionSpacing,
+                getCascadingHeight(), getSymbolDisplayString(), outlineColor, textColor);
     }
 
     /**
