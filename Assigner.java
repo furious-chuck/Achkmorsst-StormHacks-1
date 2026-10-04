@@ -32,6 +32,6 @@ public class Assigner extends ExpressionPackingStatement {
 
     @Override
     public String compile() {
-        return expressions[0].compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + expressions[1];
+        return expressions[0].compile() + " " + (hasOperator ? shortHandOperator : "") + "= " + expressions[1].compile() + ";\n";
     }
 }

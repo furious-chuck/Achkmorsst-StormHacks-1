@@ -119,7 +119,7 @@ public abstract class AtomicExpression extends BlockExpression {
 
             @Override
             public String compile() {
-                return String.valueOf(value);
+                return "(" + String.valueOf(value) + ")";
             }
 
             @Override

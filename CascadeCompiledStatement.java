@@ -9,7 +9,7 @@ public abstract class CascadeCompiledStatement implements Statement {
 
     @Override
     public String cascadeCompile() {
-        return compile() + "\n" + followingStatement.cascadeCompile();
+        return compile() + "\n" + (followingStatement == null ? "" : followingStatement.cascadeCompile());
     }
 
 }

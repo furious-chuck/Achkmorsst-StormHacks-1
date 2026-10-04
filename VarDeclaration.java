@@ -12,6 +12,6 @@ public class VarDeclaration extends ExpressionPackingStatement {
 
     @Override
     public String compile() {
-        return expressions[0].compile() + " " + expressions[1].compile() + " = " + expressions[2] + "\n";
+        return expressions[0].compile() + " " + expressions[1].compile() + " = " + expressions[2].compile() + ";\n";
     }
 }

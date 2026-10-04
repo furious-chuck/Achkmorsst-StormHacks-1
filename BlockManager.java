@@ -1,4 +1,6 @@
 import java.awt.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
@@ -28,12 +30,30 @@ public class BlockManager implements Paintable {
 
     public void compileOnce() {
         if (!canCompile()) Util.unableToCan();
-        // todo: finish this method
+        File compiledFile = new File("CompiledFiles/Compiled.java");
+        try {
+            boolean success = compiledFile.createNewFile();
+            if (!success) {
+                compiledFile.delete();
+                compiledFile.createNewFile();
+            }
+        } catch (IOException e) {
+            Util.unableToCan();
+        }
+
+        String compilationResult = "public class Compiled {\npublic static void main(String[] args) {\n";
+        compilationResult += statements.getFirst().cascadeCompile();
+        compilationResult += "}\n}";
+        try {
+            Files.write(Paths.get("CompiledFiles/Compiled.java"), compilationResult.getBytes());
+        } catch (IOException e) {
+            Util.unableToCan();
+        }
     }
 
     public void compileTwice() {
         compileOnce();
-        Terminal.executeCommand("javac Compiled.java");
+        Terminal.executeCommand("javac CompiledFiles/Compiled.java");
         //todo: output result (new display?), add way to fail.
     }
 
