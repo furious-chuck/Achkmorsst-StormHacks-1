@@ -1,7 +1,7 @@
 import java.awt.*;
 import java.util.Objects;
 
-public class Assigner extends ExpressionPackingExpression {
+public class Assigner extends ExpressionPackingStatement {
 
     boolean hasOperator;
     String shortHandOperator;

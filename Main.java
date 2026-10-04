@@ -2,7 +2,11 @@ public class Main {
 
     public static void main(String[] args) {
 
-        BlockExpression be = new Assigner(new AtomicExpression.Numbers.IntNumber(10), new AtomicExpression.Numbers.DoubleNumber(10.1));
+        BlockStatement be = new Assigner(new AtomicExpression.Numbers.IntNumber(10), new AtomicExpression.Numbers.DoubleNumber(10.1));
+        BlockStatement ba = new Assigner(new AtomicExpression.StringExpression("hello!="), new AtomicExpression.Numbers.DoubleNumber(1021));
+
+        be.connectNextStatement(ba);
+
         be.position = new RectVector();
         Clock c = new Clock(10);
         
