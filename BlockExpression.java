@@ -106,6 +106,14 @@ public abstract class BlockExpression implements Expression, Paintable, Hoverabl
                 }
             }
         }
+        // whatever happens above, we must never stay registered as a child of the old
+        // parent: if we did, that parent would keep painting us inside its own shape
+        // (a clone) while we are simultaneously drawn at our dragged position.
+        int leftoverIndex = oldParent.indexOfChild(this);
+        if (leftoverIndex >= 0) {
+            oldParent.setChildElement(leftoverIndex, null);
+        }
+        parentExpression = null;
     }
 
     /**
