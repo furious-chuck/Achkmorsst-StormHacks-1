@@ -1,3 +1,5 @@
+import java.awt.*;
+
 public class Block { // louie/dingus' thingus thing
     int blockType = 0;
 
